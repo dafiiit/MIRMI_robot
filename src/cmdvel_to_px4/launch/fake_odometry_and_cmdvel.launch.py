@@ -4,6 +4,14 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
+    vicon_odometry = Node(
+        package='px4_localization_bridge',
+        executable='vicon_odometry_pub',
+        name='vicon_odometry_pub',
+        output='screen',
+        parameters=[{'vicon_topic': '/vicon/Robot_1/Robot_1/pose'}],
+    )
+    
     fake_odometry = Node(
         package='px4_localization_bridge',
         executable='fake_odometry_pub_2',
@@ -26,7 +34,8 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        fake_odometry,
+        #vicon_odometry,
+        #fake_odometry,
         litime_bms,
-        TimerAction(period=2.0, actions=[cmdvel]),
+        TimerAction(period=3.0, actions=[cmdvel]),
     ])

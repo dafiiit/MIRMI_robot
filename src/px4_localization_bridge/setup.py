@@ -27,6 +27,7 @@ setup(
             'fake_odometry_pub = px4_localization_bridge.fake_odometry_pub:main',
             'odom_to_px4 = px4_localization_bridge.odom_to_px4:main',
             'fake_odometry_pub_2 = px4_localization_bridge.fake_pub:main',
+            'vicon_odometry_pub = px4_localization_bridge.vicon_odometry_pub:main',
         ],
     },
 )
