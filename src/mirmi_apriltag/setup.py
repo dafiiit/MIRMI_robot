@@ -10,7 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('share/' + package_name + '/launch', ['launch/apriltag_detection.launch.py']),
+        ('share/' + package_name + '/launch', ['launch/apriltag_detection.launch.py', 'launch/usb_apriltag_detection.launch.py']),
         ('share/' + package_name + '/config', ['config/tags.yaml']),
     ],
     install_requires=['setuptools'],

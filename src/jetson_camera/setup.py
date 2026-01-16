@@ -25,6 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             'camera_node = jetson_camera.camera_node:main',
+            'usb_camera_node = jetson_camera.usb_camera_node:main',
         ],
     },
 )
