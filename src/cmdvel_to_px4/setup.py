@@ -12,6 +12,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/launch', [
             'launch/px4_bridge.launch.py',
+            'launch/startup_combined.launch.py',
         ]),
     ],
     install_requires=['setuptools'],
