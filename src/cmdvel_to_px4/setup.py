@@ -11,7 +11,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name + '/launch', [
-            'launch/fake_odometry_and_cmdvel.launch.py',
+            'launch/px4_bridge.launch.py',
         ]),
     ],
     install_requires=['setuptools'],
