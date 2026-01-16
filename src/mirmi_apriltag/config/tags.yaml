@@ -1,0 +1,10 @@
+apriltag:
+  ros__parameters:
+    image_transport: raw    # Wir nutzen das lokale Raw image
+    family: 36h11           # Standard Apriltag Familie
+    size: 0.150             # Größe des Tags in Meter (Messen!)
+    max_hamming: 1          # Fehlerkorrektur (0 = strikt)
+    z_up: true              # Z-Achse zeigt aus dem Tag heraus
+
+    # Liste der Tags, die erkannt werden sollen (Optional, aber gut für Namen)
+    ids: [0, 1, 2, 3, 4]    # IDs die du nutzt
