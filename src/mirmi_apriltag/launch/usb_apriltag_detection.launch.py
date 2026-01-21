@@ -1,7 +1,9 @@
-
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition, LaunchConfigurationEquals
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
 def generate_launch_description():
@@ -12,52 +14,122 @@ def generate_launch_description():
         'tags.yaml'
     )
 
-    # 1. USB Camera Node (Custom Node in jetson_camera package)
-    camera_node = Node(
-        package='jetson_camera',
-        executable='usb_camera_node',
-        name='usb_camera_node',
-        parameters=[{'device_id': 1}],  # Default to 1 (USB Camera)
+    # Arguments
+    camera_type_arg = DeclareLaunchArgument(
+        'camera_type',
+        default_value='realsense',
+        description='Type of camera to use: "realsense" (D435i) or "usb" (Generic)'
+    )
+    
+    camera_type = LaunchConfiguration('camera_type')
+
+    # 1a. RealSense Camera Node (Official Driver)
+    realsense_node = Node(
+        condition=LaunchConfigurationEquals('camera_type', 'realsense'),
+        package='realsense2_camera',
+        executable='realsense2_camera_node',
+        name='camera',
+        # namespace='camera', # Removed to avoid /camera/camera/ topic structure
+        parameters=[{
+            'align_depth.enable': True,       # Align depth to color
+            'enable_color': True,
+            'enable_depth': True,
+            'rgb_camera.profile': '640x480x30',
+            'depth_module.profile': '640x480x30',
+            'filters': 'colorizer'            # Enable colorizer to publish colored depth maps (allows JPEG compression)
+        }],
         remappings=[
-            # Note: The node already publishes to /usb_camera/... by default 
-            # so we don't strictly need remappings if the code is hardcoded,
-            # but being explicit or allowing override is fine.
-            # My code hardcoded '/usb_camera/image_raw', so no remapping needed here
-            # unless we want to change it.
+            # Topics will be /camera/color/image_raw, /camera/depth/image_rect_raw, etc.
         ]
     )
 
-    # 2. AprilTag Node (The math part)
-    apriltag_node = Node(
+    # 1b. USB Camera Node (Custom Node)
+    usb_camera_node = Node(
+        condition=LaunchConfigurationEquals('camera_type', 'usb'),
+        package='jetson_camera',
+        executable='usb_camera_node',
+        name='usb_camera_node',
+        parameters=[{'device_id': 1}], 
+    )
+
+    # 2. AprilTag Node
+
+    # AprilTag for RealSense
+    apriltag_node_rs = Node(
+        condition=LaunchConfigurationEquals('camera_type', 'realsense'),
         package='apriltag_ros',
         executable='apriltag_node',
-        name='usb_apriltag_node',
+        name='apriltag_node_rs',
         parameters=[config_path],
         remappings=[
-            # Subscribe to the USB camera topics
+            ('image_rect', '/camera/camera/color/image_raw'), 
+            ('camera_info', '/camera/camera/color/camera_info'),
+            ('detections', '/camera/detections')
+        ]
+    )
+
+    # AprilTag for USB
+    apriltag_node_usb = Node(
+        condition=LaunchConfigurationEquals('camera_type', 'usb'),
+        package='apriltag_ros',
+        executable='apriltag_node',
+        name='apriltag_node_usb',
+        parameters=[config_path],
+        remappings=[
             ('image_rect', '/usb_camera/image_raw'), 
             ('camera_info', '/usb_camera/camera_info'),
-            # Publish detections to a separate topic
             ('detections', '/usb_camera/detections')
         ]
     )
 
-    # 3. Visualizer Node (The visualization part)
-    visualizer_node = Node(
+    # 3. Visualizer Node
+    
+    # Visualizer for RealSense
+    visualizer_node_rs = Node(
+        condition=LaunchConfigurationEquals('camera_type', 'realsense'),
         package='mirmi_apriltag',
         executable='apriltag_visualizer',
-        name='usb_apriltag_visualizer',
+        name='apriltag_visualizer_rs',
         remappings=[
-            # Input from USB camera and its detections
+            ('/camera/image_raw', '/camera/camera/color/image_raw'),
+            ('/detections', '/camera/detections'),
+            # Explicitly name the output overlay topic
+            ('/camera/tag_detections_image/compressed', '/apriltag/overlay/compressed')
+        ]
+    )
+
+    # Visualizer for USB
+    visualizer_node_usb = Node(
+        condition=LaunchConfigurationEquals('camera_type', 'usb'),
+        package='mirmi_apriltag',
+        executable='apriltag_visualizer',
+        name='apriltag_visualizer_usb',
+        remappings=[
             ('/camera/image_raw', '/usb_camera/image_raw'),
             ('/detections', '/usb_camera/detections'),
-            # Output visualization to a separate topic
             ('/camera/tag_detections_image/compressed', '/usb_camera/tag_detections_image/compressed')
         ]
     )
 
+    # 4. Depth Visualizer (Bandwidth optimization)
+    depth_visualizer_node = Node(
+        condition=LaunchConfigurationEquals('camera_type', 'realsense'),
+        package='mirmi_apriltag',
+        executable='depth_visualizer',
+        name='depth_visualizer',
+        parameters=[{
+            'input_topic': '/camera/camera/aligned_depth_to_color/image_raw',
+            'output_topic': '/camera/depth_visualization'
+        }]
+    )
+
     return LaunchDescription([
-        camera_node,
-        apriltag_node,
-        visualizer_node
+        camera_type_arg,
+        realsense_node,
+        usb_camera_node,
+        apriltag_node_rs,
+        apriltag_node_usb,
+        visualizer_node_rs,
+        visualizer_node_usb,
+        depth_visualizer_node
     ])

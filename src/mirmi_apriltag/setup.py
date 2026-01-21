@@ -27,6 +27,7 @@ setup(
     entry_points={
         'console_scripts': [
             'apriltag_visualizer = mirmi_apriltag.apriltag_visualizer:main',
+            'depth_visualizer = mirmi_apriltag.depth_visualizer:main',
         ],
     },
 )
