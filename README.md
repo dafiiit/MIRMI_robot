@@ -111,3 +111,44 @@ ros2 launch foxglove_bridge foxglove_bridge_launch.xml
 ### QGroundControl (QGC)
 1.  Per USB-C mit dem Baseboard verbinden.
 2.  QGroundControl starten.
+
+---
+
+## 6. Genauigkeits-Evaluierung
+
+Um die Genauigkeit der AprilTag Erkennung gegenüber dem Vicon System zu evaluieren:
+
+```bash
+ros2 run mirmi_apriltag accuracy_investigation
+```
+
+Das Skript speichert die Daten in einem lokalen Ordner mit Zeitstempel:
+`~/accuracy_data/accuracy_YYYY-MM-DD_HH-MM-SS.csv`
+
+---
+
+## 7. Daten Backup (Google Drive)
+
+Um die gesamten Messdaten zu sichern und zu synchronisieren, verwenden wir `rclone`.
+
+### Installation & Setup
+1.  Rclone installieren (Benötigt sudo):
+    ```bash
+    sudo apt install rclone
+    ```
+2.  Google Drive konfigurieren:
+    ```bash
+    rclone config
+    ```
+    *   `n` (New remote)
+    *   Name: `gdrive`
+    *   Storage: `drive` (Google Drive)
+    *   Folge den Anweisungen zur Authentifizierung.
+
+### Backup & Synchronisierung
+Nutzen Sie das bereitgestellte Skript, um den lokalen Ordner `~/accuracy_data` mit dem Cloud-Ordner `accuracy_data` zu synchronisieren:
+
+```bash
+cd ~/ws_sensor_combined
+./backup_data.sh
+```

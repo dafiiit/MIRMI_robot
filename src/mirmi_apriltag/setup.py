@@ -28,6 +28,7 @@ setup(
         'console_scripts': [
             'apriltag_visualizer = mirmi_apriltag.apriltag_visualizer:main',
             'depth_visualizer = mirmi_apriltag.depth_visualizer:main',
+            'accuracy_investigation = mirmi_apriltag.accuracy_investigation:main',
         ],
     },
 )
