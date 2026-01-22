@@ -3,7 +3,7 @@
 # Configuration
 LOCAL_DIR=~/accuracy_data
 REMOTE_NAME="gdrive"
-REMOTE_FOLDER="BA_MIRMI_testdata"
+REMOTE_FOLDER="accuracy_data"
 
 # Colors
 GREEN='\033[0;32m'

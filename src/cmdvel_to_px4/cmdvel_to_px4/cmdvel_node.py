@@ -14,10 +14,12 @@ class CmdVelToActuatorsSafe(Node):
         self.rate_hz = 50.0
         self.dt = 1.0 / self.rate_hz
         self.deadman_timeout = 0.3
-        self.throttle_max = 0.6
+        self.throttle_max = 0.7
         self.steer_max = 0.6
+        self.tool_max = 0.7
         self.motor_index = 0          # MAIN 1 → Motor
         self.steer_index = 1          # MAIN 2 → Servo (Lenkung)
+        self.tool_index = 2 
         self.num_motors = 12
 
         self.last_cmd = Twist()
@@ -71,18 +73,21 @@ class CmdVelToActuatorsSafe(Node):
         if age > self.deadman_timeout:
             throttle = 0.0
             steer = 0.0
+            tool = 0.0
         else:
             throttle = clamp(self.last_cmd.linear.x, -self.throttle_max, self.throttle_max)
             steer = clamp(self.last_cmd.angular.z, -self.steer_max, self.steer_max)
+            tool = clamp(self.last_cmd.linear.z, -self.tool_max, self.tool_max)
 
-        self.publish_actuators(now_us, throttle, steer)
+        self.publish_actuators(now_us, throttle, steer, tool)
 
-    def publish_actuators(self, t, throttle, steer):
+    def publish_actuators(self, t, throttle, steer, tool):
         mot = ActuatorMotors()
         mot.timestamp = t
         mot.control = [0.0] * self.num_motors
         mot.control[self.motor_index] = throttle
         mot.control[self.steer_index] = steer
+        mot.control[self.tool_index] = tool
         self.pub_mot.publish(mot)
 
     def arm(self, t):

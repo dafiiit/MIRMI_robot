@@ -32,8 +32,17 @@ def generate_launch_description():
         parameters=[{'vicon_topic': '/vicon/Robot_1/Robot_1/pose'}],
     )
 
+    # 4. Run PX4 arm service command node
+    px4_arm_service_node = Node(
+        package='px4_arm_service',
+        executable='command_services',
+        name='command_services',
+        output='screen',
+    )
+
     return LaunchDescription([
         px4_bridge_launch,
         foxglove_bridge_launch,
         vicon_odometry_node,
+        px4_arm_service_node,
     ])

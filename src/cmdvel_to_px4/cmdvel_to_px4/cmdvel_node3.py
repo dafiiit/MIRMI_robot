@@ -26,7 +26,7 @@ class CmdVelToPx4Rover(Node):
         # ---- Feste Standardparameter für dein Setup ----
         self.rate_hz = 50.0
         self.dt = 1.0 / self.rate_hz
-        self.deadman = 0.30     # Sekunden ohne cmd_vel → Stop
+        self.deadman = 0.10     # Sekunden ohne cmd_vel → Stop
         self.warmup = 0.50      # Sekunden bis Offboard aktiv
         self.throttle_max = 0.6 # max. Motorkommandos (±)
         self.throttle_bias = -0.25 # Neutralstellung des ESC
@@ -39,6 +39,12 @@ class CmdVelToPx4Rover(Node):
         self.motor_index = 0           # MAIN1 = Motor
         self.steer_index_aux = 0       # AUX1  = Lenkservo
         self.steer_index_main = 1      # (nur falls steering_on_main=True)
+        self.tool_on_main = True       # MAIN-Bank fuer Zusatz-Tool
+        self.tool_index_main = 1       # MAIN3 = Tool (PWM)
+        self.tool_index_aux = 1        # AUX2, falls tool_on_main=False
+        self.tool_max = 1.0
+        self.tool_bias = 0.0
+        self.tool_unidirectional = False  # True: 0..1, False: -1..1
 
         # Array-Längen automatisch bestimmen
         self.n_main = len(ActuatorMotors().control)   # typ. 12
@@ -62,6 +68,7 @@ class CmdVelToPx4Rover(Node):
         self.last_cmd_ts = self.get_clock().now()
         self.vx = 0.0
         self.wz = 0.0
+        self.vz = 0.0
         self.force_stop = False
         self.warmup_ticks = int(self.warmup / self.dt)
         self.warm_cnt = 0
@@ -80,6 +87,7 @@ class CmdVelToPx4Rover(Node):
     def on_cmd(self, msg: Twist):
         self.vx = msg.linear.x
         self.wz = msg.angular.z
+        self.vz = msg.linear.z
         self.last_cmd_ts = self.get_clock().now()
         self.force_stop = False
 
@@ -125,7 +133,7 @@ class CmdVelToPx4Rover(Node):
         self.pub_cmd.publish(vc)
 
     # --- Publisher ---
-    def pub_main_aux(self, t_us: int, thr: float, steer: float):
+    def pub_main_aux(self, t_us: int, thr: float, steer: float, tool: float):
         mot = ActuatorMotors()
         mot.timestamp = t_us
         mot.control = [0.0] * self.n_main
@@ -133,6 +141,8 @@ class CmdVelToPx4Rover(Node):
             mot.control[self.motor_index] = thr
         if self.steering_on_main and 0 <= self.steer_index_main < self.n_main:
             mot.control[self.steer_index_main] = steer
+        if self.tool_on_main and 0 <= self.tool_index_main < self.n_main:
+            mot.control[self.tool_index_main] = tool
         self.pub_main.publish(mot)
 
         if not self.steering_on_main:
@@ -141,6 +151,8 @@ class CmdVelToPx4Rover(Node):
             srv.control = [0.0] * self.n_aux
             if 0 <= self.steer_index_aux < self.n_aux:
                 srv.control[self.steer_index_aux] = steer
+            if (not self.tool_on_main) and 0 <= self.tool_index_aux < self.n_aux:
+                srv.control[self.tool_index_aux] = tool
             self.pub_aux.publish(srv)
 
     # --- Main Loop ---
@@ -151,7 +163,7 @@ class CmdVelToPx4Rover(Node):
         self.hb_offboard_mode(t_us)
 
         if self.warm_cnt < self.warmup_ticks:
-            self.pub_main_aux(t_us, self.throttle_bias, 0.0)
+            self.pub_main_aux(t_us, self.throttle_bias, 0.0, 0.0)
             self.warm_cnt += 1
             return
 
@@ -170,10 +182,16 @@ class CmdVelToPx4Rover(Node):
         timed_out = age > self.deadman
         raw_thr = 0.0
         if not (self.force_stop or timed_out):
-            raw_thr = clamp(self.vx, -1.0, 1.0) * self.throttle_max
+            raw_thr = clamp(self.vx, -0.8, 0.8) * self.throttle_max
         steer = 0.0
         if not (self.force_stop or timed_out):
             steer = clamp(self.wz, -1.0, 1.0) * self.steer_max
+        tool = 0.0
+        if not (self.force_stop or timed_out):
+            if self.tool_unidirectional:
+                tool = clamp(self.vz, 0.0, 1.0) * self.tool_max
+            else:
+                tool = clamp(self.vz, -1.0, 1.0) * self.tool_max
 
         if self.invert_speed:
             raw_thr = -raw_thr
@@ -181,13 +199,16 @@ class CmdVelToPx4Rover(Node):
             steer = -steer
 
         thr = clamp(raw_thr + self.throttle_bias, -1.0, 1.0)
+        tool = clamp(tool, -1.0, 1.0)
 
-        self.pub_main_aux(t_us, thr, steer)
+        self.pub_main_aux(t_us, thr, steer, tool)
 
         # Debug-Ausgabe einmal pro Sekunde
         self._dbg = (self._dbg + 1) % int(max(1, 1.0 / self.dt))
         if self._dbg == 0:
-            self.get_logger().info(f"thr={thr:.2f}, steer={steer:.2f}, age={age:.2f}s")
+            self.get_logger().info(
+                f"thr={thr:.2f}, steer={steer:.2f}, tool={tool:.2f}, age={age:.2f}s"
+            )
 
 
 def main(args=None):
