@@ -44,7 +44,7 @@ class UsbCameraNode(Node):
         if not self.cap.isOpened():
             self.get_logger().error(f'Could not open video device {self.device_id}!')
 
-        self.timer = self.create_timer(1.0/10.0, self.timer_callback) # 10 Hz (USB cams are often 30, but let's be safe)
+        self.timer = self.create_timer(1.0/5.0, self.timer_callback) # 10 Hz (USB cams are often 30, but let's be safe)
 
     def timer_callback(self):
         ret, frame = self.cap.read()

@@ -24,12 +24,13 @@ class CmdVelToPx4Rover(Node):
         super().__init__('cmdvel_to_px4_rover')
 
         # ---- Feste Standardparameter für dein Setup ----
-        self.rate_hz = 50.0
+        self.rate_hz = 20.0
         self.dt = 1.0 / self.rate_hz
         self.deadman = 0.10     # Sekunden ohne cmd_vel → Stop
         self.warmup = 0.50      # Sekunden bis Offboard aktiv
         self.throttle_max = 0.6 # max. Motorkommandos (±)
         self.throttle_bias = -0.25 # Neutralstellung des ESC
+        self.tool_bias = 0.25
         self.steer_max = 0.6    # max. Lenkkommandos (±)
         self.invert_speed = False
         self.invert_steer = False
@@ -40,7 +41,7 @@ class CmdVelToPx4Rover(Node):
         self.steer_index_aux = 0       # AUX1  = Lenkservo
         self.steer_index_main = 1      # (nur falls steering_on_main=True)
 
-        # Array-Längen automatisch bestimmen
+        # Array-Längen automatisch bestimmenself.throttle_bias = -0.25
         self.n_main = len(ActuatorMotors().control)   # typ. 12
         self.n_aux = len(ActuatorServos().control)    # typ. 8
 
@@ -169,7 +170,7 @@ class CmdVelToPx4Rover(Node):
 
         if self.warm_cnt < self.warmup_ticks:
             self.pub_main_aux(t_us, self.throttle_bias, 0.0)
-            self.set_actuator_set1(t_us, 0.0)
+            self.set_actuator_set1(t_us, -0.25)
             self.warm_cnt += 1
             return
 
@@ -188,11 +189,11 @@ class CmdVelToPx4Rover(Node):
         timed_out = age > self.deadman
         raw_thr = 0.0
         steer = 0.0
-        tool = 0.0
+        raw_tool = 0.0
         if not (self.force_stop or timed_out):
             raw_thr = clamp(self.vx, -0.8, 0.8) * self.throttle_max
             steer = clamp(self.wz, -1.0, 1.0) * self.steer_max
-            tool = clamp(self.vz, -1.0, 1.0)
+            raw_tool = clamp(self.vz, -1.0, 1.0)
         
         if self.invert_speed:
             raw_thr = -raw_thr
@@ -200,7 +201,7 @@ class CmdVelToPx4Rover(Node):
             steer = -steer
                 
         thr = clamp(raw_thr + self.throttle_bias, -1.0, 1.0)
-        
+        tool = clamp(raw_tool + self.tool_bias,-1.0, 1.0)
         self.pub_main_aux(t_us, thr, steer)
         self.set_actuator_set1(t_us, tool) 
 

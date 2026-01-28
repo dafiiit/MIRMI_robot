@@ -80,7 +80,7 @@ class JetsonCameraNode(Node):
             msg.header.stamp = now
             msg.header.frame_id = frame_id
             msg.format = "jpeg"
-            success, encoded_image = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+            success, encoded_image = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 40])
             if success:
                 msg.data = encoded_image.tobytes()
                 self.compressed_pub_.publish(msg)
