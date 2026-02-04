@@ -9,7 +9,10 @@ def generate_launch_description():
             name='ir_tracker_node',
             output='screen',
             parameters=[
-                {'threshold': 50}
+                {'threshold': 200},
+                {'target_frequency': 5.0},
+                {'frequency_tolerance': 1.0},
+                {'history_size': 60}
             ]
         )
     ])
