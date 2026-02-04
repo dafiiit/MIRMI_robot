@@ -26,12 +26,12 @@ class CmdVelToPx4Rover(Node):
         # ---- Feste Standardparameter für dein Setup ----
         self.rate_hz = 20.0
         self.dt = 1.0 / self.rate_hz
-        self.deadman = 0.10     # Sekunden ohne cmd_vel → Stop
+        self.deadman = 0.05     # Sekunden ohne cmd_vel → Stop
         self.warmup = 0.50      # Sekunden bis Offboard aktiv
-        self.throttle_max = 0.6 # max. Motorkommandos (±)
-        self.throttle_bias = -0.25 # Neutralstellung des ESC
-        self.tool_bias = 0.25
-        self.steer_max = 0.6    # max. Lenkkommandos (±)
+        self.throttle_max = 0.9 # max. Motorkommandos (±) 0.6
+        self.throttle_bias = 0.0 # Neutralstellung des ESC
+        self.tool_bias = 0.0
+        self.steer_max = 0.9    # max. Lenkkommandos (±) 0.6
         self.invert_speed = False
         self.invert_steer = False
 
@@ -144,9 +144,12 @@ class CmdVelToPx4Rover(Node):
     def pub_main_aux(self, t_us: int, thr: float, steer: float):
         mot = ActuatorMotors()
         mot.timestamp = t_us
-        mot.control = [0.0] * self.n_main
+        mot.control = [float('nan')] * self.n_main
+        #self.get_logger().info(f"Publishing to MAIN motors: thr={thr}, steer={steer}")
         if 0 <= self.motor_index < self.n_main:
             mot.control[self.motor_index] = thr
+            # Bitmaske: Bit i gehört zu motor_index i
+            mot.reversible_flags = (1 << self.motor_index)
         if self.steering_on_main and 0 <= self.steer_index_main < self.n_main:
             mot.control[self.steer_index_main] = steer
             
@@ -155,7 +158,7 @@ class CmdVelToPx4Rover(Node):
         if not self.steering_on_main:
             srv = ActuatorServos()
             srv.timestamp = t_us
-            srv.control = [0.0] * self.n_aux
+            srv.control = [float('nan')] * self.n_aux
             if 0 <= self.steer_index_aux < self.n_aux:
                 srv.control[self.steer_index_aux] = steer
                 
@@ -169,8 +172,8 @@ class CmdVelToPx4Rover(Node):
         self.hb_offboard_mode(t_us)
 
         if self.warm_cnt < self.warmup_ticks:
-            self.pub_main_aux(t_us, self.throttle_bias, 0.0)
-            self.set_actuator_set1(t_us, -0.25)
+            self.pub_main_aux(t_us, -self.throttle_bias, 0.0)
+            self.set_actuator_set1(t_us, -self.tool_bias)
             self.warm_cnt += 1
             return
 
@@ -191,16 +194,17 @@ class CmdVelToPx4Rover(Node):
         steer = 0.0
         raw_tool = 0.0
         if not (self.force_stop or timed_out):
-            raw_thr = clamp(self.vx, -0.8, 0.8) * self.throttle_max
+            raw_thr = clamp(self.vx, -1.0, 1.0) * self.throttle_max
             steer = clamp(self.wz, -1.0, 1.0) * self.steer_max
             raw_tool = clamp(self.vz, -1.0, 1.0)
+        
         
         if self.invert_speed:
             raw_thr = -raw_thr
         if self.invert_steer:
             steer = -steer
                 
-        thr = clamp(raw_thr + self.throttle_bias, -1.0, 1.0)
+        thr = clamp(raw_thr - self.throttle_bias, -1.0, 1.0)
         tool = clamp(raw_tool + self.tool_bias,-1.0, 1.0)
         self.pub_main_aux(t_us, thr, steer)
         self.set_actuator_set1(t_us, tool) 
