@@ -33,7 +33,7 @@ class CmdVelToPx4Rover(Node):
         self.tool_bias = 0.0
         self.steer_max = 0.9    # max. Lenkkommandos (±) 0.6
         self.invert_speed = False
-        self.invert_steer = False
+        self.invert_steer = True
 
         # Hardware-Zuordnung (wie bei dir)
         self.steering_on_main = False  # False = AUX-Bank
