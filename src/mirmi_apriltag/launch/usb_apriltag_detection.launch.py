@@ -31,15 +31,15 @@ def generate_launch_description():
         name='camera',
         # namespace='camera', # Removed to avoid /camera/camera/ topic structure
         parameters=[{
-            'enable_infra1': False,
-            'enable_infra2': False,
+            'enable_infra1': True,
+            'enable_infra2': True,
             'enable_extrinsics': False,
-            'enable_pointcloud': True,      # ist gut
+            'pointcloud__neon_.enable': False,
             'align_depth.enable': False,       # Schalten wir erst an, wenn du Farbe+Tiefe übereinander brauchst (später gut)
             'enable_color': True,
             'enable_depth': True,
-            'rgb_camera.profile': '1920x1080x10', # auf 10 Hz reduziert (von 30)
-            'depth_module.profile': '1280x720x10', # auf 10 Hz reduziert (von 30)
+            'rgb_camera.colour_profile': '1920x1080x10', # auf 10 Hz reduziert (von 30)
+            'depth_module.depth_profile': '1280x720x10', # auf 10 Hz reduziert (von 30)
             'filters': 'colorizer'            # Enable colorizer to publish colored depth maps (allows JPEG compression)
         }],
         remappings=[
