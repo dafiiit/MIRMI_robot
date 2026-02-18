@@ -26,7 +26,11 @@ setup(
         'console_scripts': [
             'circle_cmd_vel_px4 = rover_control.circle_cmd_vel_px4:main',
             'cmd_vel_mux_simple = rover_control.cmd_vel_mux_simple:main',
+            'cmd_vel_mux_lfi = rover_control.cmd_vel_mux_lfi:main',
             'gps_position_pub = rover_control.gps_position_pub:main',
+            'pole_detector = rover_control.pole_detector:main',
+            'lidar_preprocess_node = rover_control.lidar_preprocess_node:main',
+            'lfi_logger_node = rover_control.lfi_logger_node:main',
         ],
     },
 )
