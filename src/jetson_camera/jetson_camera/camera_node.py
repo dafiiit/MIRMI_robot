@@ -5,6 +5,7 @@ from sensor_msgs.msg import Image, CompressedImage, CameraInfo
 from cv_bridge import CvBridge
 import cv2
 
+
 class JetsonCameraNode(Node):
     def __init__(self):
         super().__init__('jetson_camera_node')
@@ -17,7 +18,7 @@ class JetsonCameraNode(Node):
             depth=1
         )
         self.compressed_pub_ = self.create_publisher(CompressedImage, '/camera/image_raw/compressed', qos_wlan)
-        
+
         # 2. QoS für LOKAL (Raw): Zuverlässig (Reliable), damit apriltag_ros nicht meckert
         qos_local = QoSProfile(
             reliability=ReliabilityPolicy.RELIABLE,
@@ -25,12 +26,12 @@ class JetsonCameraNode(Node):
             depth=1
         )
         self.raw_pub_ = self.create_publisher(Image, '/camera/image_raw', qos_local)
-        
+
         # 3. Camera Info Publisher (Required by AprilTag)
         self.info_pub_ = self.create_publisher(CameraInfo, '/camera/camera_info', qos_local)
 
-        self.timer = self.create_timer(1.0/5.0, self.timer_callback) # 5 Hz
-        
+        self.timer = self.create_timer(1.0 / 5.0, self.timer_callback)  # 5 Hz
+
         # Pipeline bleibt gleich
         self.pipeline = (
             "nvarguscamerasrc sensor-id=0 ! "
@@ -72,7 +73,7 @@ class JetsonCameraNode(Node):
             info_msg.p = [554.256, 0.0, 320.5, 0.0,
                           0.0, 554.256, 240.5, 0.0,
                           0.0, 0.0, 1.0, 0.0]
-            
+
             self.info_pub_.publish(info_msg)
 
             # Compressed (WLAN -> Best Effort)
@@ -88,6 +89,7 @@ class JetsonCameraNode(Node):
     def __del__(self):
         if self.cap.isOpened():
             self.cap.release()
+
 
 def main(args=None):
     rclpy.init(args=args)

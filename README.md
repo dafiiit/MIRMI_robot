@@ -94,6 +94,37 @@ ros2 run jetson_camera camera_node
 ros2 launch mirmi_apriltag usb_apriltag_detection.launch.py
 ```
 
+### LiDAR Pole Detection (`rover_control/pole_detector`)
+Node starten:
+```bash
+cd ~/Repos/MIRMI_robot
+source install/setup.bash
+ros2 run rover_control pole_detector
+```
+
+Wichtige Topics:
+* Input PointCloud: Parameter `cloud_topic` (Default: `/livox/lidar`)
+* Output Pole Position: `/pole_estimate` (`geometry_msgs/PointStamped`)
+* Output Confidence: `/pole_confidence` (`std_msgs/Float32`)
+
+Wichtige Parameter (live änderbar mit `ros2 param set`):
+* Geometrie/ROI: `z_min`, `z_max`, `r_min`, `r_max`
+* Cluster: `grid_res`, `min_points_per_cell`, `min_cells_per_cluster`, `min_points_per_cluster`
+* Pole Prior: `expected_diameter`, `diameter_tolerance`, `expected_range`, `range_tolerance`
+* Tracking: `ema_alpha`, `lock_frames`, `track_gate_distance`
+* RANSAC: `use_ransac`, `ransac_max_iters`, `ransac_inlier_thresh`, `ransac_min_inlier_ratio`, `ransac_min_inliers`
+
+Beispiele:
+```bash
+# RANSAC aktivieren/deaktivieren
+ros2 param set /pole_detector use_ransac true
+ros2 param set /pole_detector use_ransac false
+
+# RANSAC robuster gegen Ausreißer machen (strenger / lockerer)
+ros2 param set /pole_detector ransac_inlier_thresh 0.025
+ros2 param set /pole_detector ransac_min_inlier_ratio 0.50
+```
+
 ---
 
 ## 5. Visualisierung & GCS

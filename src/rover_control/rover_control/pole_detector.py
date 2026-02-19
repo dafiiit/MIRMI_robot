@@ -44,6 +44,11 @@ class PoleDetector(Node):
         self.declare_parameter("diameter_tolerance", 0.06)
         self.declare_parameter("expected_range", 0.50)
         self.declare_parameter("range_tolerance", 0.35)
+        self.declare_parameter("use_ransac", True)
+        self.declare_parameter("ransac_max_iters", 60)
+        self.declare_parameter("ransac_inlier_thresh", 0.03)
+        self.declare_parameter("ransac_min_inlier_ratio", 0.45)
+        self.declare_parameter("ransac_min_inliers", 12)
         self.declare_parameter("ema_alpha", 0.30)
         self.declare_parameter("lock_frames", 3)
         self.declare_parameter("track_gate_distance", 0.35)
@@ -64,6 +69,7 @@ class PoleDetector(Node):
         self._was_detected = False
         self._last_detection_log_ns = 0
         self._missed_frames = 0
+        self._rng = np.random.default_rng()
 
         cloud_topic = str(self.get_parameter("cloud_topic").value)
         self.sub = self.create_subscription(PointCloud2, cloud_topic, self.on_cloud, 10)
@@ -88,6 +94,11 @@ class PoleDetector(Node):
         diam_tol = float(self.get_parameter("diameter_tolerance").value)
         exp_r = float(self.get_parameter("expected_range").value)
         r_tol = float(self.get_parameter("range_tolerance").value)
+        use_ransac = bool(self.get_parameter("use_ransac").value)
+        ransac_max_iters = int(self.get_parameter("ransac_max_iters").value)
+        ransac_inlier_thresh = float(self.get_parameter("ransac_inlier_thresh").value)
+        ransac_min_inlier_ratio = float(self.get_parameter("ransac_min_inlier_ratio").value)
+        ransac_min_inliers = int(self.get_parameter("ransac_min_inliers").value)
         ema_alpha = float(self.get_parameter("ema_alpha").value)
         lock_frames = int(self.get_parameter("lock_frames").value)
         gate_dist = float(self.get_parameter("track_gate_distance").value)
@@ -184,14 +195,31 @@ class PoleDetector(Node):
             if self._has_track and float(np.linalg.norm(centroid - self._track_xy)) > gate_dist:
                 continue
 
-            # Approximate diameter from cluster spread around centroid.
-            dist = np.sqrt(((points - centroid) ** 2).sum(axis=1))
-            diameter = 2.0 * float(dist.max())
+            # Robust diameter/center estimate: RANSAC circle fit with fallback.
+            inlier_count = total_pts
+            if use_ransac:
+                fit = self._fit_circle_ransac(
+                    points=points,
+                    max_iters=ransac_max_iters,
+                    inlier_thresh=ransac_inlier_thresh,
+                    min_inlier_ratio=ransac_min_inlier_ratio,
+                    min_inliers=ransac_min_inliers,
+                )
+                if fit is not None:
+                    centroid, radius, inlier_count = fit
+                    diameter = 2.0 * radius
+                else:
+                    dist = np.sqrt(((points - centroid) ** 2).sum(axis=1))
+                    diameter = 2.0 * float(np.percentile(dist, 90.0))
+            else:
+                dist = np.sqrt(((points - centroid) ** 2).sum(axis=1))
+                diameter = 2.0 * float(np.percentile(dist, 90.0))
+
             if diameter < min_diam or diameter > max_diam:
                 continue
 
             # Score terms: geometric priors + density + track continuity.
-            density = total_pts / max(diameter, 1e-3)
+            density = inlier_count / max(diameter, 1e-3)
             range_c = float(np.linalg.norm(centroid))
             range_score = -abs(range_c - exp_r) / max(r_tol, 1e-3)
             diam_score = -abs(diameter - exp_diam) / max(diam_tol, 1e-3)
@@ -203,7 +231,7 @@ class PoleDetector(Node):
 
             score = (
                 w_density * density
-                + w_points * math.log(total_pts + 1.0)
+                + w_points * math.log(inlier_count + 1.0)
                 + w_range * range_score
                 + w_diameter * diam_score
                 + track_bonus
@@ -214,7 +242,7 @@ class PoleDetector(Node):
                 best_score = score
                 best_centroid = centroid
                 best_diam = diameter
-                best_pts = total_pts
+                best_pts = inlier_count
 
         if best_centroid is None:
             self._publish_none(msg)
@@ -250,6 +278,101 @@ class PoleDetector(Node):
         self._missed_frames = 0
         self._maybe_log_detection(self._track_xy, pub_conf, best_diam, msg.header.frame_id)
         self._publish_estimate(msg, self._track_xy, pub_conf)
+
+    def _fit_circle_ransac(
+        self,
+        points: np.ndarray,
+        max_iters: int,
+        inlier_thresh: float,
+        min_inlier_ratio: float,
+        min_inliers: int,
+    ) -> Optional[Tuple[np.ndarray, float, int]]:
+        n = int(points.shape[0])
+        if n < 3:
+            return None
+
+        max_iters = max(1, max_iters)
+        inlier_thresh = max(1e-4, inlier_thresh)
+        min_required = max(3, min_inliers, int(math.ceil(min_inlier_ratio * n)))
+
+        best_inlier_mask: Optional[np.ndarray] = None
+        best_count = 0
+
+        for _ in range(max_iters):
+            sample_idx = self._rng.choice(n, size=3, replace=False)
+            p1, p2, p3 = points[sample_idx[0]], points[sample_idx[1]], points[sample_idx[2]]
+            circle = self._circle_from_3_points(p1, p2, p3)
+            if circle is None:
+                continue
+            center, radius = circle
+            if not np.isfinite(radius) or radius <= 1e-4:
+                continue
+
+            residuals = np.abs(np.linalg.norm(points - center, axis=1) - radius)
+            inlier_mask = residuals <= inlier_thresh
+            count = int(np.count_nonzero(inlier_mask))
+            if count > best_count:
+                best_count = count
+                best_inlier_mask = inlier_mask
+
+        if best_inlier_mask is None or best_count < min_required:
+            return None
+
+        inlier_points = points[best_inlier_mask]
+        refined = self._fit_circle_least_squares(inlier_points)
+        if refined is None:
+            return None
+        center, radius = refined
+        if not np.isfinite(radius) or radius <= 1e-4:
+            return None
+
+        refined_residuals = np.abs(np.linalg.norm(points - center, axis=1) - radius)
+        refined_count = int(np.count_nonzero(refined_residuals <= inlier_thresh))
+        if refined_count < min_required:
+            return None
+        return center.astype(np.float32), float(radius), refined_count
+
+    def _fit_circle_least_squares(self, points: np.ndarray) -> Optional[Tuple[np.ndarray, float]]:
+        if points.shape[0] < 3:
+            return None
+        x = points[:, 0].astype(np.float64)
+        y = points[:, 1].astype(np.float64)
+        a = np.column_stack((2.0 * x, 2.0 * y, np.ones_like(x)))
+        b = x * x + y * y
+        try:
+            sol, _, _, _ = np.linalg.lstsq(a, b, rcond=None)
+        except np.linalg.LinAlgError:
+            return None
+        cx, cy, c0 = float(sol[0]), float(sol[1]), float(sol[2])
+        radius_sq = c0 + cx * cx + cy * cy
+        if radius_sq <= 0.0:
+            return None
+        center = np.array([cx, cy], dtype=np.float64)
+        return center, math.sqrt(radius_sq)
+
+    def _circle_from_3_points(
+        self,
+        p1: np.ndarray,
+        p2: np.ndarray,
+        p3: np.ndarray,
+    ) -> Optional[Tuple[np.ndarray, float]]:
+        x1, y1 = float(p1[0]), float(p1[1])
+        x2, y2 = float(p2[0]), float(p2[1])
+        x3, y3 = float(p3[0]), float(p3[1])
+        d = 2.0 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2))
+        if abs(d) < 1e-6:
+            return None
+
+        u1 = x1 * x1 + y1 * y1
+        u2 = x2 * x2 + y2 * y2
+        u3 = x3 * x3 + y3 * y3
+        cx = (u1 * (y2 - y3) + u2 * (y3 - y1) + u3 * (y1 - y2)) / d
+        cy = (u1 * (x3 - x2) + u2 * (x1 - x3) + u3 * (x2 - x1)) / d
+        center = np.array([cx, cy], dtype=np.float64)
+        radius = float(np.linalg.norm(center - np.array([x1, y1], dtype=np.float64)))
+        if not np.isfinite(radius):
+            return None
+        return center, radius
 
     def _publish_estimate(self, cloud_msg: PointCloud2, xy: np.ndarray, conf: float) -> None:
         pole = PointStamped()
