@@ -34,7 +34,7 @@ class JetsonCameraNode(Node):
         # Pipeline bleibt gleich
         self.pipeline = (
             "nvarguscamerasrc sensor-id=0 ! "
-            "video/x-raw(memory:NVMM), width=(int)1280, height=(int)720, format=(string)NV12, framerate=(fraction)5/1 ! "
+            "video/x-raw(memory:NVMM), width=(int)1640, height=(int)1232, format=(string)NV12, framerate=(fraction)30/1 ! "
             "nvvidconv flip-method=0 ! "
             "video/x-raw, width=(int)640, height=(int)480, format=(string)BGRx ! "
             "videoconvert ! "

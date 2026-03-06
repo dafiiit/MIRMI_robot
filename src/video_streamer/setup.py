@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'mirmi_apriltag'
+package_name = 'video_streamer'
 
 setup(
     name=package_name,
@@ -10,8 +10,6 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('share/' + package_name + '/launch', ['launch/apriltag_detection.launch.py', 'launch/usb_apriltag_detection.launch.py']),
-        ('share/' + package_name + '/config', ['config/tags.yaml', 'config/isaac_ros_apriltag_params.yaml']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -26,9 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'apriltag_visualizer = mirmi_apriltag.apriltag_visualizer:main',
-            'depth_visualizer = mirmi_apriltag.depth_visualizer:main',
-            'accuracy_investigation = mirmi_apriltag.accuracy_investigation:main',
+	    'video_stream = video_streamer.gstreamer_node:main', 
         ],
     },
 )

@@ -6,5 +6,12 @@ apriltag:
     max_hamming: 1          # Fehlerkorrektur (0 = strikt)
     z_up: true              # Z-Achse zeigt aus dem Tag heraus
 
+    # CPU-Optimierungen: reduzieren die Rechenzeit erheblich
+    decimate: 2.0           # Bild intern halbieren vor Detektion → 4x weniger Pixel
+    blur: 0.0               # Kein Blur (0 = aus)
+    threads: 2              # Parallele Threads für Detektion
+    refine_edges: false     # Edge-Refinement deaktivieren (teuer, selten nötig)
+    debug: false
+
     # Liste der Tags, die erkannt werden sollen (Optional, aber gut für Namen)
     ids: [0, 1, 2, 3, 4]    # IDs die du nutzt

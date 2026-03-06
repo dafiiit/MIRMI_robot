@@ -56,7 +56,7 @@ class UsbCameraNode(Node):
             raw_msg = self.bridge.cv2_to_imgmsg(frame, encoding="bgr8")
             raw_msg.header.stamp = now
             raw_msg.header.frame_id = frame_id
-            self.raw_pub_.publish(raw_msg)
+            #self.raw_pub_.publish(raw_msg)  (I stopped the raw image for testing)
 
             # Camera Info (Dummy calibration for now, as requested)
             info_msg = CameraInfo()

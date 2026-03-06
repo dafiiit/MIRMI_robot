@@ -1,0 +1,12 @@
+/**:
+  ros__parameters:
+    # Tag size in meters (measure your physical tag)
+    size: 0.150
+    # Maximum number of tags to detect
+    max_tags: 64
+    # Tile/window size for adaptive thresholding (pixels)
+    tile_size: 4
+    # Tag family (CUDA backend only supports tag36h11)
+    tag_family: tag36h11
+    # Backend: CUDA = GPU, PVA = Jetson PVA engine, CPU = fallback
+    backends: CUDA
