@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>docking_test_suite</name>
+  <version>1.0.0</version>
+  <description>Isolated testing package for docking AprilTag accuracy evaluation</description>
+  <maintainer email="david.metzler.2003@gmail.com">holybro</maintainer>
+  <license>MIT</license>
+
+  <!-- Core ROS 2 -->
+  <depend>rclpy</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>message_filters</depend>
+  <depend>tf2_ros</depend>
+
+  <!-- AprilTag detection (at least one must be available) -->
+  <exec_depend>apriltag_msgs</exec_depend>
+  <exec_depend>isaac_ros_apriltag_interfaces</exec_depend>
+
+  <!-- PX4 -->
+  <exec_depend>px4_msgs</exec_depend>
+
+  <!-- Python deps (available via pip) -->
+  <!-- numpy, opencv-python, pyyaml, pandas, matplotlib -->
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

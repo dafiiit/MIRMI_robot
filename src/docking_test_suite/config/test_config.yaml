@@ -1,0 +1,138 @@
+# =============================================================================
+# Docking Test Suite - Master Configuration
+# =============================================================================
+# All topic names, calibration offsets, and test parameters in one place.
+# Adjust these values for your specific hardware setup.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# TOPIC NAMES
+# -----------------------------------------------------------------------------
+topics:
+  # Vicon motion capture (PoseStamped)
+  vicon_robot_pose: "/vicon/Robot_1/Robot_1/pose"
+  vicon_target_pose: "/vicon/Tag/Tag/pose"
+
+  # AprilTag detection
+  # Supported msg types: "apriltag_msgs" or "isaac_ros"
+  detection_msg_type: "apriltag_msgs"
+  apriltag_detections: "/camera/detections"
+
+  # Camera
+  camera_image_raw: "/camera/image_raw"
+  camera_compressed: "/camera/tag_detections_image/compressed"
+  camera_info: "/camera/camera/color/camera_info"
+
+  # Robot control
+  cmd_vel: "/cmd_vel"
+
+  # PX4 odometry (fallback when Vicon is unavailable)
+  px4_odometry: "/fmu/out/vehicle_odometry"
+
+  # PX4 command interfaces
+  vehicle_command: "/fmu/in/vehicle_command"
+  offboard_control_mode: "/fmu/in/offboard_control_mode"
+
+# -----------------------------------------------------------------------------
+# CALIBRATION / FRAME DISPLACEMENTS
+# -----------------------------------------------------------------------------
+calibration:
+  # Transform from Vicon target markers to the REAL AprilTag center.
+  # T_real_target = T_vicon_target * T_offset
+  # Measure the offset between your Vicon markers on the docking station
+  # and the physical center of the AprilTag.
+  vicon_target_to_real_target:
+    translation: [0.0, 0.0, 0.0]       # [x, y, z] meters
+    rotation:    [0.0, 0.0, 0.0, 1.0]  # [qx, qy, qz, qw] quaternion
+
+  # Transform from Vicon robot markers to camera optical frame.
+  # T_camera = T_vicon_robot * T_offset
+  # Measure the offset between your Vicon markers on the robot chassis
+  # and the camera's optical center.
+  vicon_robot_to_camera:
+    translation: [0.0, 0.0, 0.0]       # [x, y, z] meters
+    rotation:    [0.0, 0.0, 0.0, 1.0]  # [qx, qy, qz, qw] quaternion
+
+  # Physical AprilTag size (outer black border edge-to-edge) in meters
+  tag_size: 0.150
+
+# -----------------------------------------------------------------------------
+# TEST A: Static Distance Profile
+# -----------------------------------------------------------------------------
+test_a:
+  distances: [10.0, 9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0, 1.0, 0.0]
+  record_duration: 10.0    # seconds per distance step
+
+# -----------------------------------------------------------------------------
+# TEST B: Static Angular Profile
+# -----------------------------------------------------------------------------
+test_b:
+  fixed_distance: 3.0      # meters from docking station
+  angles: [-60, -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50, 60]
+  record_duration: 10.0    # seconds per angle step
+
+# -----------------------------------------------------------------------------
+# TEST C: Dynamic Approach
+# -----------------------------------------------------------------------------
+test_c:
+  start_distance: 5.0      # meters
+  approach_speed: 0.2       # m/s (constant velocity)
+  timeout: 35.0             # seconds safety timeout (5m / 0.2m/s = 25s + margin)
+  stop_distance: 0.15      # meters - stop when tag is this close
+
+# -----------------------------------------------------------------------------
+# TEST D: Environmental Stress
+# -----------------------------------------------------------------------------
+test_d:
+  # List of conditions to test. Each runs a Test-C-style dynamic approach.
+  conditions:
+    - "sun"
+    - "cloudy"
+    - "night"
+    - "rain_sim"
+    - "lights_on"
+    - "lights_off"
+    - "spotlight"
+  # Inherits test_c approach parameters
+
+# -----------------------------------------------------------------------------
+# RECORDING SETTINGS
+# -----------------------------------------------------------------------------
+recording:
+  output_dir: "~/docking_test_data"
+  save_images: true
+  image_save_rate: 2.0     # Hz - save annotated JPEG at this rate
+  sync_slop: 0.5           # seconds for ApproximateTimeSynchronizer
+  sync_queue_size: 50
+
+# -----------------------------------------------------------------------------
+# SYSTEM SETTINGS
+# -----------------------------------------------------------------------------
+system:
+  # Set false for outdoor tests without Vicon
+  use_vicon: true
+
+  # When Vicon is unavailable, use PX4's internal odometry as position reference
+  use_px4_odom_fallback: true
+
+  # Robot driving parameters
+  robot_driver:
+    max_linear_speed: 1.0     # m/s safety limit
+    max_angular_speed: 1.0    # rad/s safety limit
+    control_rate: 20.0        # Hz
+    position_tolerance: 0.05  # meters (closed-loop stop threshold)
+    angle_tolerance: 2.0      # degrees (closed-loop turn threshold)
+
+# -----------------------------------------------------------------------------
+# GOOGLE DRIVE UPLOAD
+# -----------------------------------------------------------------------------
+google_drive:
+  enabled: false
+  # Path to OAuth2 credentials JSON downloaded from Google Cloud Console.
+  # See README for setup instructions.
+  credentials_file: "~/docking_test_data/credentials.json"
+  token_file: "~/docking_test_data/token.json"
+  # Google Drive folder ID (from the folder URL)
+  folder_id: ""
+  # Automatically upload after each test completes
+  auto_upload: false
