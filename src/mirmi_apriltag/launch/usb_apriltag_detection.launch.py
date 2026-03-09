@@ -43,9 +43,10 @@ def generate_launch_description():
             # DDS serialisation load and the SDK capture overhead by ~8x total.
             # 6fps is plenty for AprilTag-based EKF localisation.
             'rgb_camera.color_profile': '848x480x6',
-            # Disable the SDK's built-in compressed publisher – we don't need
-            # it (the apriltag_visualizer publishes its own compressed stream).
             'rgb_camera.enable_auto_exposure': True,
+            # Only publish the raw transport for color/image_raw.
+            # Drops compressed, compressedDepth and theora sub-topics.
+            'camera.color.image_raw.enable_pub_plugins': ['image_transport/raw'],
             'publish_tf': False,
             'enable_sync': False,
         }]
