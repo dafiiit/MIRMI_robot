@@ -152,3 +152,10 @@ Nutzen Sie das bereitgestellte Skript, um den lokalen Ordner `~/accuracy_data` m
 cd ~/ws_sensor_combined
 ./backup_data.sh
 ```
+
+Für die Docking Test Suite (`~/docking_test_data`) verwenden Sie das entsprechende Skript:
+
+```bash
+cd ~/ws_sensor_combined
+./backup_docking_data.sh
+```

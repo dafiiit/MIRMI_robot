@@ -4,8 +4,10 @@
     size: 0.150
     # Maximum number of tags to detect
     max_tags: 64
-    # Tile/window size for adaptive thresholding (pixels)
-    tile_size: 4
+    # Tile/window size for adaptive thresholding (pixels).
+    # Smaller value = finer local contrast windows = more sensitive detection.
+    # 1 = maximum sensitivity (finest threshold windows), no CPU cost (CUDA path).
+    tile_size: 2
     # Tag family (CUDA backend only supports tag36h11)
     tag_family: tag36h11
     # Backend: CUDA = GPU, PVA = Jetson PVA engine, CPU = fallback

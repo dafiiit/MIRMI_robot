@@ -39,10 +39,10 @@ def generate_launch_description():
             'pointcloud.enable': False,
             'enable_color': True,
             'enable_depth': False,
-            # 1920x1080 @ 15fps was ~75% CPU. 848x480 @ 6fps cuts both the
-            # DDS serialisation load and the SDK capture overhead by ~8x total.
-            # 6fps is plenty for AprilTag-based EKF localisation.
-            'rgb_camera.color_profile': '848x480x6',
+            # 1920x1080 @ 15fps was ~75% CPU. 848x480 @ 6fps was prior setting.
+            # 1280x720 @ 6fps gives 2.25x more pixels for better tag detection
+            # at longer range, while keeping fps low to limit CPU/DDS load.
+            'rgb_camera.color_profile': '1280x720x6',
             'rgb_camera.enable_auto_exposure': True,
             # Only publish the raw transport for color/image_raw.
             # Drops compressed, compressedDepth and theora sub-topics.
@@ -70,8 +70,8 @@ def generate_launch_description():
         name='rectify_rs',
         namespace='',
         parameters=[{
-            'output_width': 848,
-            'output_height': 480,
+            'output_width': 1280,
+            'output_height': 720,
         }],
         remappings=[
             ('image_raw', '/camera/camera/color/image_raw'),

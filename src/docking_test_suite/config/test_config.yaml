@@ -18,9 +18,9 @@ topics:
   detection_msg_type: "apriltag_msgs"
   apriltag_detections: "/camera/detections"
 
-  # Camera
-  camera_image_raw: "/camera/image_raw"
-  camera_compressed: "/camera/tag_detections_image/compressed"
+  # Camera (done)
+  camera_image_raw: "/camera/camera/color/image_raw"
+  camera_compressed: "/apriltag/overlay/compressed"
   camera_info: "/camera/camera/color/camera_info"
 
   # Robot control
