@@ -50,7 +50,10 @@ class UsbCameraNode(Node):
         ret, frame = self.cap.read()
         if ret:
             now = self.get_clock().now().to_msg()
-            frame_id = "usb_camera_link"
+            # Keep frame_id consistent with the rest of the stack (AprilTag + TF).
+            # This node does not publish TF; a static TF publisher should define
+            # the transform from base_link to this optical frame.
+            frame_id = "camera_color_optical_frame"
 
             # Raw
             raw_msg = self.bridge.cv2_to_imgmsg(frame, encoding="bgr8")

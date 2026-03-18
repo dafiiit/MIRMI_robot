@@ -60,4 +60,16 @@ def generate_launch_description():
     return LaunchDescription([
         apriltag_container,
         visualizer_node,
+        # base_link -> camera_color_optical_frame (overhead mounting yaw += pi)
+        Node(
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            name='base_link_to_camera',
+            arguments=[
+                '--x', '0.1875', '--y', '0.0', '--z', '-0.1875',
+                '--qx', '0.5', '--qy', '0.5', '--qz', '0.5', '--qw', '0.5',
+                '--frame-id', 'base_link',
+                '--child-frame-id', 'camera_color_optical_frame'
+            ]
+        ),
     ])

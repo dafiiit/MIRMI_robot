@@ -9,27 +9,27 @@
 # TOPIC NAMES
 # -----------------------------------------------------------------------------
 topics:
-  # Vicon motion capture (PoseStamped)
+  # Vicon motion capture (PoseStamped) (TODO)
   vicon_robot_pose: "/vicon/Robot_1/Robot_1/pose"
   vicon_target_pose: "/vicon/Tag/Tag/pose"
 
   # AprilTag detection
-  # Supported msg types: "apriltag_msgs" or "isaac_ros"
-  detection_msg_type: "apriltag_msgs"
-  apriltag_detections: "/camera/detections"
+  # Supported msg types: "apriltag_msgs" or "isaac_ros" (done)
+  detection_msg_type: "isaac_ros"
+  apriltag_detections: "/tag_detections"
 
   # Camera (done)
   camera_image_raw: "/camera/camera/color/image_raw"
   camera_compressed: "/apriltag/overlay/compressed"
   camera_info: "/camera/camera/color/camera_info"
 
-  # Robot control
+  # Robot control (done)
   cmd_vel: "/cmd_vel"
 
-  # PX4 odometry (fallback when Vicon is unavailable)
+  # PX4 odometry (fallback when Vicon is unavailable) (done)
   px4_odometry: "/fmu/out/vehicle_odometry"
 
-  # PX4 command interfaces
+  # PX4 command interfaces (done)
   vehicle_command: "/fmu/in/vehicle_command"
   offboard_control_mode: "/fmu/in/offboard_control_mode"
 
@@ -42,19 +42,19 @@ calibration:
   # Measure the offset between your Vicon markers on the docking station
   # and the physical center of the AprilTag.
   vicon_target_to_real_target:
-    translation: [0.0, 0.0, 0.0]       # [x, y, z] meters
-    rotation:    [0.0, 0.0, 0.0, 1.0]  # [qx, qy, qz, qw] quaternion
+    translation: [-0.122, 0.0, 0.0]       # [x, y, z] meters
+    rotation:    [0.0, 0.0, 0.70710678, 0.70710678]  # [qx, qy, qz, qw] quaternion
 
   # Transform from Vicon robot markers to camera optical frame.
   # T_camera = T_vicon_robot * T_offset
   # Measure the offset between your Vicon markers on the robot chassis
   # and the camera's optical center.
   vicon_robot_to_camera:
-    translation: [0.0, 0.0, 0.0]       # [x, y, z] meters
-    rotation:    [0.0, 0.0, 0.0, 1.0]  # [qx, qy, qz, qw] quaternion
+    translation: [0.1875, 0.0, -0.1875]       # [x, y, z] meters
+    rotation:    [0.5, -0.5, 0.5, -0.5]  # [qx, qy, qz, qw] quaternion
 
   # Physical AprilTag size (outer black border edge-to-edge) in meters
-  tag_size: 0.150
+  tag_size: 0.162
 
 # -----------------------------------------------------------------------------
 # TEST A: Static Distance Profile

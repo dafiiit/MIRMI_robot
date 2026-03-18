@@ -53,6 +53,8 @@ setup(
             'docking_diagnostics = docking_test_suite.diagnostics:main',
             'gdrive_upload = docking_test_suite.gdrive_uploader:main',
             'docking_analyze = docking_test_suite.analysis:main',
+            # TF utilities
+            'pose_tf_broadcaster = docking_test_suite.pose_tf_broadcaster:main',
         ],
     },
 )
