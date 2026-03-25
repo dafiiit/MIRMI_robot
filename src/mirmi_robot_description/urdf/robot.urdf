@@ -1,65 +1,76 @@
 <?xml version="1.0"?>
 <robot name="mirmi_robot">
 
-  <!-- Core world frames -->
-  <link name="map"/>
-  <link name="world"/>
-  <link name="vicon/world"/>
+  <!-- ═══════════════════════════════════════════════════════════
+       MIRMI Robot Description
+       Defines the static sensor frames relative to base_link.
+       Published by robot_state_publisher via rsp.launch.py.
+       ═══════════════════════════════════════════════════════════ -->
 
-  <joint name="map_to_world" type="fixed">
-    <parent link="map"/>
-    <child link="world"/>
-    <origin xyz="0 0 0" rpy="0 0 0"/>
-  </joint>
-
-  <joint name="world_to_vicon_world" type="fixed">
-    <parent link="world"/>
-    <child link="vicon/world"/>
-    <origin xyz="0 0 0" rpy="0 0 0"/>
-  </joint>
-
-  <!-- Robot 1 Subtree (dynamically linked to vicon/world by vicon_bridge) -->
-  <link name="vicon/Robot_1/Robot_1"/>
-
-  <joint name="vicon_world_to_robot_1" type="floating">
-    <parent link="vicon/world"/>
-    <child link="vicon/Robot_1/Robot_1"/>
-  </joint>
-
+  <!-- ── Robot body ─────────────────────────────────────────── -->
   <link name="base_link"/>
-  <joint name="vicon_robot_to_base_link" type="fixed">
-    <parent link="vicon/Robot_1/Robot_1"/>
-    <child link="base_link"/>
-    <origin xyz="0 0 0" rpy="0 0 0"/>
-  </joint>
 
-  <link name="camera_color_optical_frame"/>
-  <joint name="base_link_to_camera" type="fixed">
+  <!-- ── Camera (RealSense / USB)  ──────────────────────────── -->
+  <!--
+      Mounting: front of robot, slightly forward and upward.
+      The optical frame uses the ROS camera convention:
+        x-right, y-down, z-forward
+      We apply a 90° rotation around X and then 90° around Z
+      to convert from robot (x-forward, y-left, z-up) to
+      optical (x-right, y-down, z-forward).
+  -->
+  <link name="camera_link"/>
+  <joint name="base_link_to_camera_link" type="fixed">
     <parent link="base_link"/>
-    <child link="camera_color_optical_frame"/>
-    <origin xyz="0.1875 0.0 -0.1875" rpy="1.57079632679 0.0 1.57079632679"/>
+    <child  link="camera_link"/>
+    <!-- 18.75 cm forward, centred laterally, 18.75 cm below sphere origin -->
+    <origin xyz="0.1875 0.0 -0.1875" rpy="0.0 0.0 0.0"/>
   </joint>
 
-  <!-- Tag 0 Subtree (dynamically linked to vicon/world by vicon_bridge) -->
-  <link name="vicon/Tag_0/Tag_0"/>
-
-  <joint name="vicon_world_to_tag_0" type="floating">
-    <parent link="vicon/world"/>
-    <child link="vicon/Tag_0/Tag_0"/>
+  <!-- Optical frame: z-forward, x-right, y-down -->
+  <link name="camera_color_optical_frame"/>
+  <joint name="camera_link_to_optical" type="fixed">
+    <parent link="camera_link"/>
+    <child  link="camera_color_optical_frame"/>
+    <origin xyz="0.0 0.0 0.0" rpy="1.5707963267948966 0.0 1.5707963267948966"/>
   </joint>
 
-  <link name="dock_tag"/>
-  <joint name="vicon_tag_to_dock_tag" type="fixed">
-    <parent link="vicon/Tag_0/Tag_0"/>
-    <child link="dock_tag"/>
-    <origin xyz="-0.122 0.0 0.0" rpy="0.0 0.0 1.57079632344"/>
+  <!-- ── LIDAR ────────────────────────────────────────────────── -->
+  <!--
+      Mounting: top-centre of the robot, facing upward/forward.
+      Adjust xyz/rpy to match physical placement.
+  -->
+  <link name="lidar_link"/>
+  <joint name="base_link_to_lidar" type="fixed">
+    <parent link="base_link"/>
+    <child  link="lidar_link"/>
+    <!-- 5 cm forward, centred, 15 cm above base origin -->
+    <origin xyz="0.05 0.0 0.15" rpy="0.0 0.0 0.0"/>
   </joint>
 
-  <link name="vicon_real_target"/>
-  <joint name="vicon_tag_to_real_target" type="fixed">
-    <parent link="vicon/Tag_0/Tag_0"/>
-    <child link="vicon_real_target"/>
-    <origin xyz="-0.122 0.0 0.0" rpy="0.0 0.0 1.57079632344"/>
+  <!-- ── GPS ──────────────────────────────────────────────────── -->
+  <!--
+      Mounting: top of the robot body.
+      Adjust xyz to match the physical GPS antenna position.
+  -->
+  <link name="gps_link"/>
+  <joint name="base_link_to_gps" type="fixed">
+    <parent link="base_link"/>
+    <child  link="gps_link"/>
+    <!-- centred, 20 cm above base origin -->
+    <origin xyz="0.0 0.0 0.20" rpy="0.0 0.0 0.0"/>
+  </joint>
+
+  <!-- ── IMU ──────────────────────────────────────────────────── -->
+  <!--
+      Mounting: body-centred (typically coincides with base_link).
+      Adjust if the IMU is physically offset.
+  -->
+  <link name="imu_link"/>
+  <joint name="base_link_to_imu" type="fixed">
+    <parent link="base_link"/>
+    <child  link="imu_link"/>
+    <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
   </joint>
 
 </robot>
