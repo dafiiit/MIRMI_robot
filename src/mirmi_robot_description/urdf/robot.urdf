@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<robot name="mirmi_robot">
+
+  <!-- Core world frames -->
+  <link name="map"/>
+  <link name="world"/>
+  <link name="vicon/world"/>
+
+  <joint name="map_to_world" type="fixed">
+    <parent link="map"/>
+    <child link="world"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <joint name="world_to_vicon_world" type="fixed">
+    <parent link="world"/>
+    <child link="vicon/world"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Robot 1 Subtree (dynamically linked to vicon/world by vicon_bridge) -->
+  <link name="vicon/Robot_1/Robot_1"/>
+
+  <joint name="vicon_world_to_robot_1" type="floating">
+    <parent link="vicon/world"/>
+    <child link="vicon/Robot_1/Robot_1"/>
+  </joint>
+
+  <link name="base_link"/>
+  <joint name="vicon_robot_to_base_link" type="fixed">
+    <parent link="vicon/Robot_1/Robot_1"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="camera_color_optical_frame"/>
+  <joint name="base_link_to_camera" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_color_optical_frame"/>
+    <origin xyz="0.1875 0.0 -0.1875" rpy="1.57079632679 0.0 1.57079632679"/>
+  </joint>
+
+  <!-- Tag 0 Subtree (dynamically linked to vicon/world by vicon_bridge) -->
+  <link name="vicon/Tag_0/Tag_0"/>
+
+  <joint name="vicon_world_to_tag_0" type="floating">
+    <parent link="vicon/world"/>
+    <child link="vicon/Tag_0/Tag_0"/>
+  </joint>
+
+  <link name="dock_tag"/>
+  <joint name="vicon_tag_to_dock_tag" type="fixed">
+    <parent link="vicon/Tag_0/Tag_0"/>
+    <child link="dock_tag"/>
+    <origin xyz="-0.122 0.0 0.0" rpy="0.0 0.0 1.57079632344"/>
+  </joint>
+
+  <link name="vicon_real_target"/>
+  <joint name="vicon_tag_to_real_target" type="fixed">
+    <parent link="vicon/Tag_0/Tag_0"/>
+    <child link="vicon_real_target"/>
+    <origin xyz="-0.122 0.0 0.0" rpy="0.0 0.0 1.57079632344"/>
+  </joint>
+
+</robot>

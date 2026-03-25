@@ -193,21 +193,4 @@ def generate_launch_description():
         visualizer_node_rs,
         visualizer_node_usb,
         depth_visualizer_node,
-        Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            name='base_link_to_camera',
-            arguments=[
-                # base_link -> camera_color_optical_frame
-                # Mount calibration translation matches docking_test_suite config.
-                # Overhead mounting: rotate the optical frame 180° about its
-                # pointing axis (+Z in REP-103 optical frame), i.e. yaw += pi.
-                # Original quat: [0.5, -0.5, 0.5, -0.5]
-                # After yaw(pi): [0.5, 0.5, 0.5, 0.5]
-                '--x', '0.1875', '--y', '0.0', '--z', '-0.1875',
-                '--qx', '0.5', '--qy', '0.5', '--qz', '0.5', '--qw', '0.5',
-                '--frame-id', 'base_link',
-                '--child-frame-id', 'camera_color_optical_frame'
-            ]
-        )
     ])
