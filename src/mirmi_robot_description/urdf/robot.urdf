@@ -6,7 +6,6 @@
        Defines the static sensor frames relative to base_link.
        Published by robot_state_publisher via rsp.launch.py.
        ═══════════════════════════════════════════════════════════ -->
-
   <!-- ── Robot body ─────────────────────────────────────────── -->
   <link name="base_link"/>
 
@@ -40,37 +39,41 @@
       Mounting: top-centre of the robot, facing upward/forward.
       Adjust xyz/rpy to match physical placement.
   -->
+  <!--
   <link name="lidar_link"/>
   <joint name="base_link_to_lidar" type="fixed">
     <parent link="base_link"/>
     <child  link="lidar_link"/>
-    <!-- 5 cm forward, centred, 15 cm above base origin -->
     <origin xyz="0.05 0.0 0.15" rpy="0.0 0.0 0.0"/>
   </joint>
+  -->
 
   <!-- ── GPS ──────────────────────────────────────────────────── -->
   <!--
       Mounting: top of the robot body.
       Adjust xyz to match the physical GPS antenna position.
   -->
+  <!--
   <link name="gps_link"/>
   <joint name="base_link_to_gps" type="fixed">
     <parent link="base_link"/>
     <child  link="gps_link"/>
-    <!-- centred, 20 cm above base origin -->
     <origin xyz="0.0 0.0 0.20" rpy="0.0 0.0 0.0"/>
   </joint>
+  -->
 
   <!-- ── IMU ──────────────────────────────────────────────────── -->
   <!--
       Mounting: body-centred (typically coincides with base_link).
       Adjust if the IMU is physically offset.
   -->
+  <!--
   <link name="imu_link"/>
   <joint name="base_link_to_imu" type="fixed">
     <parent link="base_link"/>
     <child  link="imu_link"/>
     <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
   </joint>
+  -->
 
 </robot>
