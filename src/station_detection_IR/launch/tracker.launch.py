@@ -4,7 +4,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     return LaunchDescription([
         Node(
-            package='ir_led_tracker',
+            package='station_detection_IR',
             executable='ir_tracker_node',
             name='ir_tracker_node',
             output='screen',

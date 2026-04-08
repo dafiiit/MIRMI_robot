@@ -8,7 +8,7 @@ from launch_ros.descriptions import ComposableNode
 def generate_launch_description():
 
     isaac_params_path = os.path.join(
-        get_package_share_directory('mirmi_apriltag'),
+        get_package_share_directory('station_detection_APRILTAG'),
         'config',
         'isaac_ros_apriltag_params.yaml'
     )
@@ -52,7 +52,7 @@ def generate_launch_description():
 
     # Visualizer (CPU Python node, subscribes to GPU detections on /tag_detections)
     visualizer_node = Node(
-        package='mirmi_apriltag',
+        package='station_detection_APRILTAG',
         executable='apriltag_visualizer',
         name='apriltag_visualizer',
     )

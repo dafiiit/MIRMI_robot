@@ -66,7 +66,7 @@ class StationDetector(Node):
         self.declare_parameter("range_tolerance", 2.0)
 
         # Marker specific
-        self.declare_parameter("marker_mesh_resource", "package://LIDAR_station_detection/meshes/station.stl")
+        self.declare_parameter("marker_mesh_resource", "package://station_detection_LIDAR/meshes/station.stl")
 
         cloud_topic = str(self.get_parameter("cloud_topic").value)
         self.sub = self.create_subscription(PointCloud2, cloud_topic, self.on_cloud, 10)

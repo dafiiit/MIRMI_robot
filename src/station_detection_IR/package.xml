@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>mirmi_apriltag</name>
+  <name>station_detection_IR</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
   <maintainer email="david.metzler.2003@gmail.com">holybro</maintainer>
@@ -9,12 +9,8 @@
 
   <depend>rclpy</depend>
   <depend>sensor_msgs</depend>
-  <depend>isaac_ros_apriltag_interfaces</depend>
   <depend>cv_bridge</depend>
   <depend>geometry_msgs</depend>
-  <depend>message_filters</depend>
-  <depend>tf2_ros</depend>
-  <depend>tf_transformations</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

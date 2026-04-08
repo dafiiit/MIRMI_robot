@@ -4,7 +4,7 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 
 def generate_launch_description():
-    pkg_name = 'LIDAR_station_detection'
+    pkg_name = 'station_detection_LIDAR'
     
     detector_node = Node(
         package=pkg_name,
@@ -21,11 +21,11 @@ def generate_launch_description():
             'min_points_per_cluster': 50,
             'expected_length': 2.0,
             'expected_width': 1.5,
-            'length_tolerance': 0.6,
-            'width_tolerance': 0.5,
+            'length_tolerance': 1.5,
+            'width_tolerance': 1.5,
             'expected_range': 3.0,
             'range_tolerance': 2.0,
-            'marker_mesh_resource': 'package://LIDAR_station_detection/meshes/station.stl'
+            'marker_mesh_resource': 'package://station_detection_LIDAR/meshes/station.stl'
         }]
     )
 

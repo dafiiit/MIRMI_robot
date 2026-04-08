@@ -8,7 +8,7 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
     pkg_cmdvel_to_px4 = FindPackageShare('cmdvel_to_px4')
     pkg_foxglove_bridge = FindPackageShare('foxglove_bridge')
-    pkg_mirmi_apriltag = FindPackageShare('mirmi_apriltag')
+    pkg_mirmi_apriltag = FindPackageShare('station_detection_APRILTAG')
     pkg_mirmi_robot_description = FindPackageShare('mirmi_robot_description')
     # 1. Include existing px4_bridge.launch.py
     px4_bridge_launch = IncludeLaunchDescription(

@@ -11,7 +11,7 @@ from launch_ros.descriptions import ComposableNode
 def generate_launch_description():
 
     isaac_params_path = os.path.join(
-        get_package_share_directory('mirmi_apriltag'),
+        get_package_share_directory('station_detection_APRILTAG'),
         'config',
         'isaac_ros_apriltag_params.yaml'
     )
@@ -150,7 +150,7 @@ def generate_launch_description():
     # ── 3. Visualizer Nodes ───────────────────────────────────────────────────
     visualizer_node_rs = Node(
         condition=LaunchConfigurationEquals('camera_type', 'realsense'),
-        package='mirmi_apriltag',
+        package='station_detection_APRILTAG',
         executable='apriltag_visualizer',
         name='apriltag_visualizer_rs',
         remappings=[
@@ -162,7 +162,7 @@ def generate_launch_description():
 
     visualizer_node_usb = Node(
         condition=LaunchConfigurationEquals('camera_type', 'usb'),
-        package='mirmi_apriltag',
+        package='station_detection_APRILTAG',
         executable='apriltag_visualizer',
         name='apriltag_visualizer_usb',
         remappings=[
@@ -175,7 +175,7 @@ def generate_launch_description():
     # ── 4. Depth Visualizer ───────────────────────────────────────────────────
     depth_visualizer_node = Node(
         condition=LaunchConfigurationEquals('camera_type', 'realsense'),
-        package='mirmi_apriltag',
+        package='station_detection_APRILTAG',
         executable='depth_visualizer',
         name='depth_visualizer',
         parameters=[{

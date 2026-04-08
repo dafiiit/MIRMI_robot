@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'mirmi_apriltag'
+package_name = 'station_detection_APRILTAG'
 
 setup(
     name=package_name,
@@ -26,9 +26,9 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'apriltag_visualizer = mirmi_apriltag.apriltag_visualizer:main',
-            'depth_visualizer = mirmi_apriltag.depth_visualizer:main',
-            'accuracy_investigation = mirmi_apriltag.accuracy_investigation:main',
+            'apriltag_visualizer = station_detection_APRILTAG.apriltag_visualizer:main',
+            'depth_visualizer = station_detection_APRILTAG.depth_visualizer:main',
+            'accuracy_investigation = station_detection_APRILTAG.accuracy_investigation:main',
         ],
     },
 )

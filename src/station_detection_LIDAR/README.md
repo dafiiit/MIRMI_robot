@@ -1,4 +1,4 @@
-# LIDAR Station Detection
+# station_detection_LIDAR
 
 This package calculates the position and orientation of a large docking station ("tiny house") from `/livox/lidar` point clouds using computationally efficient 2D spatial clustering and publishes its presence, position, and confidence. 
 
@@ -21,7 +21,7 @@ The package relies on `.stl` for the 3D representation and supports setting tole
 Place your `.stl` mesh file into the `meshes` directory matching the filename specified in the launch file. Currently expected at `meshes/station.stl`.
 
 **Launch File:**
-`ros2 launch LIDAR_station_detection station_detector.launch.py`
+`ros2 launch station_detection_LIDAR station_detector.launch.py`
 
 ## Node Outputs
 

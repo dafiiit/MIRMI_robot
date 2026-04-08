@@ -1,8 +1,6 @@
-import os
-from glob import glob
 from setuptools import find_packages, setup
 
-package_name = 'LIDAR_station_detection'
+package_name = 'station_detection_IR'
 
 setup(
     name=package_name,
@@ -12,8 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name, 'launch'), glob('launch/*launch.[pxy][yma]*')),
-        (os.path.join('share', package_name, 'meshes'), glob('meshes/*')),
+        ('share/' + package_name + '/launch', ['launch/tracker.launch.py']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -28,7 +25,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'station_detector = LIDAR_station_detection.station_detector:main',
+            'ir_tracker_node = station_detection_IR.ir_tracker_node:main',
         ],
     },
 )
