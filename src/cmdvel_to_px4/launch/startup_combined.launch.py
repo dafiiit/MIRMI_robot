@@ -21,7 +21,9 @@ def generate_launch_description():
     foxglove_bridge_launch = IncludeLaunchDescription(
         AnyLaunchDescriptionSource([
             PathJoinSubstitution([pkg_foxglove_bridge, 'launch', 'foxglove_bridge_launch.xml'])
-        ])
+        ]),
+        # Hier übergeben wir die IPv6-Adresse (::) an das Launch-File
+        launch_arguments=[('address', '\'::\'')]
     )
 
     # 3. Run Vicon Odometry Publisher
@@ -67,7 +69,7 @@ def generate_launch_description():
                     '{data: true}'
                 ],
                 output='screen',
-                shell=True
+                shell=False
             )
         ]
     )
