@@ -52,14 +52,7 @@ def generate_launch_description():
         }]
     )
 
-    # ── 1b. USB Camera Node ───────────────────────────────────────────────────
-    usb_camera_node = Node(
-        condition=LaunchConfigurationEquals('camera_type', 'usb'),
-        package='jetson_camera',
-        executable='usb_camera_node',
-        name='usb_camera_node',
-        parameters=[{'device_id': 1}],
-    )
+    # ── 1b. USB Camera Node (DELETED) ───────────────────────────────────────
 
     # ── 2a. GPU pipeline for RealSense ────────────────────────────────────────
     # RectifyNode + AprilTagNode share a ComposableNodeContainer so that
@@ -187,7 +180,6 @@ def generate_launch_description():
     return LaunchDescription([
         camera_type_arg,
         realsense_node,
-        usb_camera_node,
         realsense_apriltag_container,
         usb_apriltag_container,
         visualizer_node_rs,

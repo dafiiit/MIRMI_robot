@@ -51,11 +51,11 @@ def generate_launch_description():
     )
 
     # 6. Launch Robot State Publisher
-    #robot_description_launch = IncludeLaunchDescription(
-    #    PythonLaunchDescriptionSource([
-    #        PathJoinSubstitution([pkg_mirmi_robot_description, 'launch', 'rsp.launch.py'])
-    #    ])
-    #)
+    robot_description_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            PathJoinSubstitution([pkg_mirmi_robot_description, 'launch', 'rsp.launch.py'])
+        ])
+    )
 
     # 7. Set Offboard Mode (Delayed to ensure service is ready)
     set_offboard_mode = TimerAction(
@@ -82,5 +82,6 @@ def generate_launch_description():
         vicon_odometry_node,
         px4_arm_service_node,
         apriltag_launch,
+        robot_description_launch,
         set_offboard_mode,
     ])
