@@ -165,17 +165,6 @@ def generate_launch_description():
         ]
     )
 
-    # ── 4. Depth Visualizer ───────────────────────────────────────────────────
-    depth_visualizer_node = Node(
-        condition=LaunchConfigurationEquals('camera_type', 'realsense'),
-        package='station_detection_APRILTAG',
-        executable='depth_visualizer',
-        name='depth_visualizer',
-        parameters=[{
-            'input_topic': '/camera/camera/aligned_depth_to_color/image_raw',
-            'output_topic': '/camera/depth_visualization',
-        }]
-    )
 
     return LaunchDescription([
         camera_type_arg,
@@ -184,5 +173,4 @@ def generate_launch_description():
         usb_apriltag_container,
         visualizer_node_rs,
         visualizer_node_usb,
-        depth_visualizer_node,
     ])

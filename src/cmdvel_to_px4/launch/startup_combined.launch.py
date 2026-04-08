@@ -46,7 +46,7 @@ def generate_launch_description():
     # 5. Launch AprilTag Detection
     apriltag_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
-            PathJoinSubstitution([pkg_mirmi_apriltag, 'launch', 'usb_apriltag_detection.launch.py'])
+            PathJoinSubstitution([pkg_mirmi_apriltag, 'launch', 'APRILTAG_detection.launch.py'])
         ])
     )
 

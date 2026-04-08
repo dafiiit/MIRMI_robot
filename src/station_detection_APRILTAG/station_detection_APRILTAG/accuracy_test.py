@@ -1,3 +1,14 @@
+"""
+Node: accuracy_test
+Function: Evaluates the precision of AprilTag detection by comparing visual detections against 
+          ground truth data from a Vicon motion capture system.
+          
+Usage:
+    - Ensure Vicon bridge is running and publishing robot/tag poses.
+    - Ensure AprilTag detection is running.
+    - Run this node: ros2 run station_detection_APRILTAG accuracy_test
+    - Data will be saved to ~/accuracy_data/ upon shutdown (Ctrl+C).
+"""
 
 import rclpy
 from rclpy.node import Node
