@@ -31,6 +31,7 @@ setup(
              'cmdvel_to_px4 = cmdvel_to_px4.cmdvel_node:main',
              'cmdvel_to_px4_2 = cmdvel_to_px4.cmdvel_node2:main',
              'cmdvel_to_px4_3 = cmdvel_to_px4.cmdvel_node3:main',
+             'process_manager = cmdvel_to_px4.process_manager_node:main',
         ],
     },
 )

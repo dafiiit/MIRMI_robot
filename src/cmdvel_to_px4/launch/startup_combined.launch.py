@@ -43,11 +43,12 @@ def generate_launch_description():
         output='screen',
     )
 
-    # 5. Launch AprilTag Detection
-    apriltag_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            PathJoinSubstitution([pkg_mirmi_apriltag, 'launch', 'APRILTAG_detection.launch.py'])
-        ])
+    # 5. Run Process Manager Node
+    process_manager_node = Node(
+        package='cmdvel_to_px4',
+        executable='process_manager',
+        name='process_manager',
+        output='screen',
     )
 
     # 6. Launch Robot State Publisher
@@ -81,7 +82,7 @@ def generate_launch_description():
         foxglove_bridge_launch,
         vicon_odometry_node,
         px4_arm_service_node,
-        apriltag_launch,
+        process_manager_node,
         robot_description_launch,
         set_offboard_mode,
     ])
