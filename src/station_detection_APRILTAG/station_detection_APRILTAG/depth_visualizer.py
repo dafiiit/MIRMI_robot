@@ -25,7 +25,9 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image, CompressedImage
 from rcl_interfaces.msg import Parameter, ParameterType, ParameterValue
 from rcl_interfaces.srv import SetParameters
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from cv_bridge import CvBridge
+
 import cv2
 import numpy as np
 
@@ -43,15 +45,22 @@ class DepthVisualizer(Node):
         out_topic = self.get_parameter('output_topic').get_parameter_value().string_value
         self.auto_enable = self.get_parameter('auto_enable_depth').get_parameter_value().bool_value
         
+        qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1
+        )
+
         self.sub = self.create_subscription(
             Image,
             in_topic,
             self.callback,
-            10
+            qos
         )
         
-        self.pub_raw = self.create_publisher(Image, out_topic + '/raw', 10)
-        self.pub_compressed = self.create_publisher(CompressedImage, out_topic + '/compressed', 10)
+        self.pub_raw = self.create_publisher(Image, out_topic + '/raw', qos)
+        self.pub_compressed = self.create_publisher(CompressedImage, out_topic + '/compressed', qos)
+
         
         self.get_logger().info(f"DepthVisualizer converting {in_topic} -> {out_topic}/compressed")
 

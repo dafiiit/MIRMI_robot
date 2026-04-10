@@ -10,6 +10,8 @@ from sensor_msgs.msg import PointCloud2
 from sensor_msgs_py import point_cloud2
 from std_msgs.msg import Float32
 from visualization_msgs.msg import Marker
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
+
 
 Cell = Tuple[int, int]
 
@@ -68,11 +70,18 @@ class StationDetector(Node):
         # Marker specific
         self.declare_parameter("marker_mesh_resource", "package://station_detection_LIDAR/meshes/station.stl")
 
-        cloud_topic = str(self.get_parameter("cloud_topic").value)
-        self.sub = self.create_subscription(PointCloud2, cloud_topic, self.on_cloud, 10)
+        qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1
+        )
 
-        self.pub_conf = self.create_publisher(Float32, "/station_confidence", 10)
-        self.pub_marker = self.create_publisher(Marker, "/station_marker", 10)
+        cloud_topic = str(self.get_parameter("cloud_topic").value)
+        self.sub = self.create_subscription(PointCloud2, cloud_topic, self.on_cloud, qos)
+
+        self.pub_conf = self.create_publisher(Float32, "/station_confidence", qos)
+        self.pub_marker = self.create_publisher(Marker, "/station_marker", qos)
+
 
         self.get_logger().info(f"StationDetector listening on {cloud_topic}")
 

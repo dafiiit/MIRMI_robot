@@ -130,12 +130,15 @@ class AprilTagVisualizer(Node):
         else:
             self.get_logger().info('JPEG encoder: cv2.imencode (CPU) – nvjpegenc not available')
 
+        qos_in = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT, depth=1)
+
         self.image_sub = self.create_subscription(
-            Image, '/camera/image_raw', self.image_callback, 10)
+            Image, '/camera/image_raw', self.image_callback, qos_in)
         self.detection_sub = self.create_subscription(
-            AprilTagDetectionArray, '/tag_detections', self.detection_callback, 10)
+            AprilTagDetectionArray, '/tag_detections', self.detection_callback, qos_in)
 
         qos_out = QoSProfile(reliability=ReliabilityPolicy.BEST_EFFORT, depth=1)
+
         self.annotated_pub = self.create_publisher(
             CompressedImage, '/camera/tag_detections_image/compressed', qos_out)
 

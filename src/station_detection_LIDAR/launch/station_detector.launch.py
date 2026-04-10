@@ -1,11 +1,25 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 
 def generate_launch_description():
     pkg_name = 'station_detection_LIDAR'
     
+    # Include Livox Driver
+    # Note: This assumes livox_ros_driver2 is in the ROS_PACKAGE_PATH
+    # which is handled by sourcing the workspace in process_manager_node.py
+    livox_driver = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([
+            os.path.join(
+                get_package_share_directory('livox_ros_driver2'),
+                'launch_ROS2', 'msg_MID360_launch.py'
+            )
+        ])
+    )
+
     detector_node = Node(
         package=pkg_name,
         executable='station_detector',
@@ -30,5 +44,6 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        livox_driver,
         detector_node
     ])
