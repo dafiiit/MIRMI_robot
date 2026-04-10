@@ -21,7 +21,7 @@ The package relies on `.stl` for the 3D representation and supports setting tole
 Place your `.stl` mesh file into the `meshes` directory matching the filename specified in the launch file. Currently expected at `meshes/station.stl`.
 
 **Launch File:**
-`ros2 launch station_detection_LIDAR station_detector.launch.py`
+`ros2 launch station_detection_LIDAR LIDAR_detection.launch.py`
 
 ## Node Outputs
 

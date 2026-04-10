@@ -14,7 +14,7 @@ class ProcessManagerNode(Node):
         # Define the components and their commands
         self.components = {
             'station_detection_APRILTAG': ['ros2', 'launch', 'station_detection_APRILTAG', 'APRILTAG_detection.launch.py'],
-            'station_detection_LIDAR': ['bash', '-c', 'source ~/ws_livox/install/setup.bash; ros2 launch station_detection_LIDAR station_detector.launch.py'],
+            'station_detection_LIDAR': ['bash', '-c', 'source ~/ws_livox/install/setup.bash; ros2 launch station_detection_LIDAR LIDAR_detection.launch.py'],
             'station_detection_IR': ['ros2', 'launch', 'station_detection_IR', 'tracker.launch.py'],
             'pole_detector': ['ros2', 'launch', 'pole_detector', 'pole_detector.launch.py'],
             'video_streamer': ['ros2', 'run', 'video_streamer', 'video_stream'],
