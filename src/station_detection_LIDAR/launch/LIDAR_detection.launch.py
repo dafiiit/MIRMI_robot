@@ -1,24 +1,46 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
+from launch.actions import LogInfo
+from launch.conditions import IfCondition
+from launch.substitutions import LaunchConfiguration
+from launch.actions import DeclareLaunchArgument
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 
 def generate_launch_description():
     pkg_name = 'station_detection_LIDAR'
+
+    start_livox_arg = DeclareLaunchArgument(
+        'start_livox_driver',
+        default_value='true',
+        description='Start livox_ros_driver2 together with station detector',
+    )
     
     # Include Livox Driver
     # Note: This assumes livox_ros_driver2 is in the ROS_PACKAGE_PATH
     # which is handled by sourcing the workspace in process_manager_node.py
-    livox_driver = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([
-            os.path.join(
-                get_package_share_directory('livox_ros_driver2'),
-                'launch_ROS2', 'msg_MID360_launch.py'
+    livox_actions = []
+    try:
+        livox_launch_path = os.path.join(
+            get_package_share_directory('livox_ros_driver2'),
+            'launch_ROS2',
+            'msg_MID360_launch.py',
+        )
+        livox_actions.append(
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource([livox_launch_path]),
+                condition=IfCondition(LaunchConfiguration('start_livox_driver')),
             )
-        ])
-    )
+        )
+    except Exception:
+        livox_actions.append(
+            LogInfo(
+                condition=IfCondition(LaunchConfiguration('start_livox_driver')),
+                msg='livox_ros_driver2 package not found; continuing without Livox driver.',
+            )
+        )
 
     detector_node = Node(
         package=pkg_name,
@@ -44,6 +66,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        livox_driver,
+        start_livox_arg,
+        *livox_actions,
         detector_node
     ])

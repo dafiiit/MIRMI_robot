@@ -209,8 +209,8 @@ class CmdVelToPx4Rover(Node):
         self.pub_main_aux(t_us, thr, steer)
         self.set_actuator_set1(t_us, tool) 
 
-        # Debug-Ausgabe einmal pro Sekunde
-        self._dbg = (self._dbg + 1) % int(max(1, 1.0 / self.dt))
+        # Debug-Ausgabe einmal pro 10 Sekunden (throttled)
+        self._dbg = (self._dbg + 1) % int(max(1, 10.0 / self.dt))
         if self._dbg == 0:
             self.get_logger().info(
                 f"thr={thr:.2f}, steer={steer:.2f}, tool={tool:.2f}, age={age:.2f}s"
