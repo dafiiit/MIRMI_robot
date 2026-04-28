@@ -1,0 +1,2 @@
+# No sample message captured for topic: /fmu/in/rover_position_setpoint
+# Reason: timeout or ros2 topic echo returned an error

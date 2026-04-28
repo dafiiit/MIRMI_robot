@@ -1,0 +1,5 @@
+# No sample message captured for topic: /fmu/out/register_ext_component_reply
+# Reason: timeout or ros2 topic echo returned an error
+
+# stderr
+[WARN] [1776418531.740842226] [_ros2cli_182274]: New publisher discovered on topic '/fmu/out/register_ext_component_reply', offering incompatible QoS. No messages will be received from it. Last incompatible policy: DURABILITY

@@ -1,0 +1,5 @@
+# No sample message captured for topic: /fmu/out/vehicle_attitude
+# Reason: timeout or ros2 topic echo returned an error
+
+# stderr
+[WARN] [1776418568.756917447] [_ros2cli_183484]: New publisher discovered on topic '/fmu/out/vehicle_attitude', offering incompatible QoS. No messages will be received from it. Last incompatible policy: DURABILITY

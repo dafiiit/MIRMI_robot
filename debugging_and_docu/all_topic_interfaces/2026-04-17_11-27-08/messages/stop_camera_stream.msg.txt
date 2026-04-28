@@ -1,0 +1,5 @@
+# No sample message captured for topic: /stop_camera_stream
+# Reason: timeout or ros2 topic echo returned an error
+
+# stderr
+!rclpy.ok()

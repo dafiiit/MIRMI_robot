@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 /cmd_vel → PX4 Direct Actuator Control
-Default-Setup für Rover:
+Default setup for rover:
   - MAIN1 → Throttle (Motor)
   - AUX1  → Steering (Servo)
 """
@@ -23,29 +23,29 @@ class CmdVelToPx4Rover(Node):
     def __init__(self):
         super().__init__('cmdvel_to_px4_rover')
 
-        # ---- Feste Standardparameter für dein Setup ----
+        # ---- Fixed default parameters for your setup ----
         self.rate_hz = 20.0
         self.dt = 1.0 / self.rate_hz
-        self.deadman = 0.05     # Sekunden ohne cmd_vel → Stop
-        self.warmup = 0.50      # Sekunden bis Offboard aktiv
-        self.throttle_max = 0.9 # max. Motorkommandos (±) 0.6
-        self.throttle_bias = 0.0 # Neutralstellung des ESC
+        self.deadman = 0.05      # seconds without cmd_vel → stop
+        self.warmup = 0.50       # seconds until offboard becomes active
+        self.throttle_max = 0.9  # max motor commands (±) 0.6
+        self.throttle_bias = 0.0 # ESC neutral position
         self.tool_bias = 0.0
-        self.steer_max = 0.9    # max. Lenkkommandos (±) 0.6
+        self.steer_max = 0.9     # max steering commands (±) 0.6
         self.invert_speed = False
         self.invert_steer = True
 
-        # Hardware-Zuordnung (wie bei dir)
-        self.steering_on_main = False  # False = AUX-Bank
-        self.motor_index = 0           # MAIN1 = Motor
-        self.steer_index_aux = 0       # AUX1  = Lenkservo
-        self.steer_index_main = 1      # (nur falls steering_on_main=True)
+        # Hardware mapping (as in your setup)
+        self.steering_on_main = False  # False = AUX bank
+        self.motor_index = 0           # MAIN1 = motor
+        self.steer_index_aux = 0       # AUX1  = steering servo
+        self.steer_index_main = 1      # (only if steering_on_main=True)
 
-        # Array-Längen automatisch bestimmenself.throttle_bias = -0.25
-        self.n_main = len(ActuatorMotors().control)   # typ. 12
-        self.n_aux = len(ActuatorServos().control)    # typ. 8
+        # Determine array lengths automatically self.throttle_bias = -0.25
+        self.n_main = len(ActuatorMotors().control)   # typically 12
+        self.n_aux = len(ActuatorServos().control)    # typically 8
 
-        # ROS2 Setup
+        # ROS2 setup
         qos = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
             durability=DurabilityPolicy.VOLATILE,
@@ -56,8 +56,8 @@ class CmdVelToPx4Rover(Node):
         self.sub_stop = self.create_subscription(Empty, '/stop', self.on_stop, qos)
         self.pub_mode = self.create_publisher(OffboardControlMode, '/fmu/in/offboard_control_mode', qos)
         self.pub_cmd = self.create_publisher(VehicleCommand, '/fmu/in/vehicle_command', qos)
-        self.pub_main = self.create_publisher(ActuatorMotors, '/fmu/in/actuator_motors', qos) # nach vorne/hinten Fahren
-        self.pub_aux = self.create_publisher(ActuatorServos, '/fmu/in/actuator_servos', qos) # Lenkung
+        self.pub_main = self.create_publisher(ActuatorMotors, '/fmu/in/actuator_motors', qos) # drive forward/backward
+        self.pub_aux = self.create_publisher(ActuatorServos, '/fmu/in/actuator_servos', qos) # steering
 
         # State
         self.last_cmd_ts = self.get_clock().now()
@@ -74,7 +74,7 @@ class CmdVelToPx4Rover(Node):
         self.timer = self.create_timer(self.dt, self.tick)
 
         self.get_logger().info(
-            f"PX4 Rover Node gestartet (MAIN1→Throttle, AUX1→Steering) "
+            f"PX4 rover node started (MAIN1→Throttle, AUX1→Steering) "
             f"| MAIN={self.n_main} AUX={self.n_aux}"
         )
 
@@ -88,9 +88,9 @@ class CmdVelToPx4Rover(Node):
 
     def on_stop(self, _):
         self.force_stop = True
-        self.get_logger().warn("NOT-STOP: sofort 0")
+        self.get_logger().warn("EMERGENCY STOP: immediate 0")
 
-    # --- PX4 Kommandos ---
+    # --- PX4 commands ---
     def hb_offboard_mode(self, t_us: int):
         m = OffboardControlMode()
         m.timestamp = t_us
@@ -145,10 +145,10 @@ class CmdVelToPx4Rover(Node):
         mot = ActuatorMotors()
         mot.timestamp = t_us
         mot.control = [float('nan')] * self.n_main
-        #self.get_logger().info(f"Publishing to MAIN motors: thr={thr}, steer={steer}")
+        # self.get_logger().info(f"Publishing to MAIN motors: thr={thr}, steer={steer}")
         if 0 <= self.motor_index < self.n_main:
             mot.control[self.motor_index] = thr
-            # Bitmaske: Bit i gehört zu motor_index i
+            # Bitmask: bit i belongs to motor_index i
             mot.reversible_flags = (1 << self.motor_index)
         if self.steering_on_main and 0 <= self.steer_index_main < self.n_main:
             mot.control[self.steer_index_main] = steer
@@ -164,7 +164,7 @@ class CmdVelToPx4Rover(Node):
                 
             self.pub_aux.publish(srv)
 
-    # --- Main Loop ---
+    # --- Main loop ---
     def tick(self):
         now = self.get_clock().now()
         t_us = now.nanoseconds // 1000
@@ -180,14 +180,14 @@ class CmdVelToPx4Rover(Node):
         if not self.offboard:
             self.set_offboard(t_us)
             self.offboard = True
-            self.get_logger().info("OFFBOARD aktiviert")
+            self.get_logger().info("OFFBOARD activated")
 
         if not self.armed:
             self.arm(t_us, True)
             self.armed = True
-            self.get_logger().info("ARM gesendet")
+            self.get_logger().info("ARM command sent")
 
-        # Deadman-Stop
+        # Deadman stop
         age = (now - self.last_cmd_ts).nanoseconds * 1e-9
         timed_out = age > self.deadman
         raw_thr = 0.0
@@ -205,11 +205,11 @@ class CmdVelToPx4Rover(Node):
             steer = -steer
                 
         thr = clamp(raw_thr - self.throttle_bias, -1.0, 1.0)
-        tool = clamp(raw_tool + self.tool_bias,-1.0, 1.0)
+        tool = clamp(raw_tool + self.tool_bias, -1.0, 1.0)
         self.pub_main_aux(t_us, thr, steer)
         self.set_actuator_set1(t_us, tool) 
 
-        # Debug-Ausgabe einmal pro 10 Sekunden (throttled)
+        # Debug output once every 10 seconds (throttled)
         self._dbg = (self._dbg + 1) % int(max(1, 10.0 / self.dt))
         if self._dbg == 0:
             self.get_logger().info(

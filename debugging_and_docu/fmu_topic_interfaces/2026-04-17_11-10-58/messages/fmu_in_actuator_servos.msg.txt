@@ -1,0 +1,12 @@
+timestamp: 1776417067134234
+timestamp_sample: 0
+control:
+- -0.0
+- .nan
+- .nan
+- .nan
+- .nan
+- .nan
+- .nan
+- .nan
+---

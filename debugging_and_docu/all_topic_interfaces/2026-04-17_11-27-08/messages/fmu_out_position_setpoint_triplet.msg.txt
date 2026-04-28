@@ -1,0 +1,5 @@
+# No sample message captured for topic: /fmu/out/position_setpoint_triplet
+# Reason: timeout or ros2 topic echo returned an error
+
+# stderr
+[WARN] [1776418519.825493245] [_ros2cli_181978]: New publisher discovered on topic '/fmu/out/position_setpoint_triplet', offering incompatible QoS. No messages will be received from it. Last incompatible policy: DURABILITY

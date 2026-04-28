@@ -1,0 +1,2 @@
+# No sample message captured for topic: /vicon/Robot_1/Robot_1/pose
+# Reason: timeout or ros2 topic echo returned an error

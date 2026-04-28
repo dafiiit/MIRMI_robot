@@ -1,0 +1,2 @@
+# No sample message captured for topic: /cmd_vel
+# Reason: timeout or ros2 topic echo returned an error

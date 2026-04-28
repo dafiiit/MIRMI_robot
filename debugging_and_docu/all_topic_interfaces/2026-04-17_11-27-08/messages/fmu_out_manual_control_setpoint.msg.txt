@@ -1,0 +1,5 @@
+# No sample message captured for topic: /fmu/out/manual_control_setpoint
+# Reason: timeout or ros2 topic echo returned an error
+
+# stderr
+[WARN] [1776418492.669576836] [_ros2cli_181224]: New publisher discovered on topic '/fmu/out/manual_control_setpoint', offering incompatible QoS. No messages will be received from it. Last incompatible policy: DURABILITY

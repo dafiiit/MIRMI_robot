@@ -1,0 +1,12 @@
+Some, but not all, publishers are offering QoSReliabilityPolicy.RELIABLE. Falling back to QoSReliabilityPolicy.BEST_EFFORT as it will connect to all publishers
+Some, but not all, publishers are offering QoSDurabilityPolicy.TRANSIENT_LOCAL. Falling back to QoSDurabilityPolicy.VOLATILE as it will connect to all publishers
+stamp:
+  sec: 1776418743
+  nanosec: 553547768
+level: 20
+name: foxglove_bridge
+msg: publishing connection graph
+file: ./src/ros2_foxglove_bridge.cpp
+function: updateConnectionGraph
+line: 564
+---

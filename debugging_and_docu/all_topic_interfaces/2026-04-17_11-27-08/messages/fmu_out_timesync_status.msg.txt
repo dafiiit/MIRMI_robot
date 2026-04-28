@@ -1,0 +1,5 @@
+# No sample message captured for topic: /fmu/out/timesync_status
+# Reason: timeout or ros2 topic echo returned an error
+
+# stderr
+[WARN] [1776418549.302296865] [_ros2cli_182866]: New publisher discovered on topic '/fmu/out/timesync_status', offering incompatible QoS. No messages will be received from it. Last incompatible policy: DURABILITY

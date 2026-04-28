@@ -1,0 +1,5 @@
+# No sample message captured for topic: /fmu/in/vehicle_visual_odometry
+# Reason: timeout or ros2 topic echo returned an error
+
+# stderr
+[WARN] [1776418402.677145462] [_ros2cli_178719]: New publisher discovered on topic '/fmu/in/vehicle_visual_odometry', offering incompatible QoS. No messages will be received from it. Last incompatible policy: RELIABILITY

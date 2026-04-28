@@ -1,0 +1,5 @@
+# No sample message captured for topic: /fmu/out/collision_constraints
+# Reason: timeout or ros2 topic echo returned an error
+
+# stderr
+[WARN] [1776418441.670841733] [_ros2cli_179762]: New publisher discovered on topic '/fmu/out/collision_constraints', offering incompatible QoS. No messages will be received from it. Last incompatible policy: DURABILITY

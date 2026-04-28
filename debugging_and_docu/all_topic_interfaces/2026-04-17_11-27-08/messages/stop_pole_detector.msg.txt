@@ -1,0 +1,2 @@
+# No sample message captured for topic: /stop_pole_detector
+# Reason: timeout or ros2 topic echo returned an error

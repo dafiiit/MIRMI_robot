@@ -1,0 +1,5 @@
+# No sample message captured for topic: /fmu/out/estimator_status_flags
+# Reason: timeout or ros2 topic echo returned an error
+
+# stderr
+[WARN] [1776418454.554911080] [_ros2cli_180059]: New publisher discovered on topic '/fmu/out/estimator_status_flags', offering incompatible QoS. No messages will be received from it. Last incompatible policy: DURABILITY

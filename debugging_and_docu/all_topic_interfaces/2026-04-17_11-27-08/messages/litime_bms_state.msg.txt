@@ -1,0 +1,31 @@
+Some, but not all, publishers are offering QoSReliabilityPolicy.RELIABLE. Falling back to QoSReliabilityPolicy.BEST_EFFORT as it will connect to all publishers
+header:
+  stamp:
+    sec: 1776418700
+    nanosec: 718160227
+  frame_id: ''
+voltage: 26.808000564575195
+temperature: 22.0
+current: -1.3259999752044678
+charge: 173052.0
+capacity: 184824.0
+design_capacity: 184824.0
+percentage: 0.9300000071525574
+power_supply_status: 0
+power_supply_health: 1
+power_supply_technology: 2
+present: true
+cell_voltage:
+- 3.318000078201294
+- 3.316999912261963
+- 3.316999912261963
+- 3.316999912261963
+- 3.316999912261963
+- 3.316999912261963
+- 3.319000005722046
+- 3.316999912261963
+cell_temperature:
+- 22.0
+location: LiTime_BMS
+serial_number: C8:47:80:18:AE:45
+---

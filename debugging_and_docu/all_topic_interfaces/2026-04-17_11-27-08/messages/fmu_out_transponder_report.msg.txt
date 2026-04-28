@@ -1,0 +1,5 @@
+# No sample message captured for topic: /fmu/out/transponder_report
+# Reason: timeout or ros2 topic echo returned an error
+
+# stderr
+[WARN] [1776418558.950565132] [_ros2cli_183179]: New publisher discovered on topic '/fmu/out/transponder_report', offering incompatible QoS. No messages will be received from it. Last incompatible policy: DURABILITY

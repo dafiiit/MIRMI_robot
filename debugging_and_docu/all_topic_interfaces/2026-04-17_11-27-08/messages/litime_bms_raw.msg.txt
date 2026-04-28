@@ -1,0 +1,3 @@
+Some, but not all, publishers are offering QoSReliabilityPolicy.RELIABLE. Falling back to QoSReliabilityPolicy.BEST_EFFORT as it will connect to all publishers
+data: '0000ffe1-0000-1000-8000-00805f9b34fb (Handle: 15): Vendor specific 000065019355aa00ac680000ac670000f50cf50cf60cf60cf50cf50cf70cf...'
+---

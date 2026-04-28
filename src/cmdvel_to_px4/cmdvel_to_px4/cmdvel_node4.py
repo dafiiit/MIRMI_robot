@@ -1,0 +1,273 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+/cmd_vel → PX4 Direct Actuator Control
+Default setup for rover:
+  - MAIN1 → Throttle (Motor)
+  - AUX1  → Steering (Servo)
+"""
+
+import rclpy
+from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
+from geometry_msgs.msg import Twist
+from std_msgs.msg import Empty
+from px4_msgs.msg import ActuatorMotors, ActuatorServos, OffboardControlMode, VehicleCommand
+
+
+def clamp(v, lo, hi):
+    return max(lo, min(hi, v))
+
+
+class CmdVelToPx4Rover(Node):
+    def __init__(self):
+        super().__init__('cmdvel_to_px4_rover')
+
+        # ---- Fixed default parameters for your setup ----
+        self.rate_hz = 20.0
+        self.dt = 1.0 / self.rate_hz
+        self.deadman = 0.2      # seconds without cmd_vel → stop
+        self.warmup = 0.50       # seconds until offboard becomes active
+        self.throttle_max = 0.9  # max motor commands (±) 0.6
+        self.throttle_bias = 0.0 # ESC neutral position
+        self.tool_bias = 0.0
+        self.steer_max = 0.9     # max steering commands (±) 0.6
+        self.invert_speed = False
+        self.invert_steer = True
+
+        # Hardware mapping (as in your setup)
+        self.steering_on_main = False  # False = AUX bank
+        self.motor_index = 0           # MAIN1 = motor
+        self.steer_index_aux = 0       # AUX1  = steering servo
+        self.steer_index_main = 1      # (only if steering_on_main=True)
+
+        # Determine array lengths automatically
+        self.n_main = len(ActuatorMotors().control)   # typically 12
+        self.n_aux = len(ActuatorServos().control)    # typically 8
+
+        # ROS2 setup
+        qos = QoSProfile(
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            durability=DurabilityPolicy.VOLATILE,
+            history=HistoryPolicy.KEEP_LAST,
+            depth=10
+        )
+        self.sub_cmd = self.create_subscription(Twist, '/cmd_vel', self.on_cmd, qos)
+        self.sub_stop = self.create_subscription(Empty, '/stop', self.on_stop, qos)
+        self.pub_mode = self.create_publisher(OffboardControlMode, '/fmu/in/offboard_control_mode', qos)
+        self.pub_cmd = self.create_publisher(VehicleCommand, '/fmu/in/vehicle_command', qos)
+        self.pub_main = self.create_publisher(ActuatorMotors, '/fmu/in/actuator_motors', qos)
+        self.pub_aux = self.create_publisher(ActuatorServos, '/fmu/in/actuator_servos', qos)
+
+        # State
+        self.last_cmd_ts = self.get_clock().now()
+        self.vx = 0.0
+        self.wz = 0.0
+        self.vz = 0.0
+        self.force_stop = False
+        self.warmup_ticks = int(self.warmup / self.dt)
+        self.warm_cnt = 0
+        self.offboard = False
+        self.armed = False
+
+        # Debug helpers
+        self._dbg = 0
+        self._last_timeout_state = False
+        self._last_force_stop_state = False
+        self._last_cmd_print_ns = 0
+
+        self.timer = self.create_timer(self.dt, self.tick)
+
+        self.get_logger().info(
+            f"PX4 rover node started (MAIN1→Throttle, AUX1→Steering) "
+            f"| MAIN={self.n_main} AUX={self.n_aux} "
+            f"| deadman={self.deadman:.3f}s rate={self.rate_hz:.1f}Hz dt={self.dt:.3f}s"
+        )
+
+    # --- Callbacks ---
+    def on_cmd(self, msg: Twist):
+        now = self.get_clock().now()
+        self.vx = msg.linear.x
+        self.wz = msg.angular.z
+        self.vz = msg.linear.z
+        self.last_cmd_ts = now
+        self.force_stop = False
+
+        # Print every received cmd_vel
+        self.get_logger().info(
+            f"RX /cmd_vel | vx={self.vx:.3f}, wz={self.wz:.3f}, vz={self.vz:.3f}, "
+            f"t={now.nanoseconds}"
+        )
+
+    def on_stop(self, _):
+        self.force_stop = True
+        self.get_logger().warn("RX /stop | EMERGENCY STOP: immediate 0")
+
+    # --- PX4 commands ---
+    def hb_offboard_mode(self, t_us: int):
+        m = OffboardControlMode()
+        m.timestamp = t_us
+        m.position = False
+        m.velocity = False
+        m.acceleration = False
+        m.attitude = False
+        m.body_rate = False
+        m.direct_actuator = True
+        self.pub_mode.publish(m)
+
+    def set_offboard(self, t_us: int):
+        vc = VehicleCommand()
+        vc.timestamp = t_us
+        vc.command = VehicleCommand.VEHICLE_CMD_DO_SET_MODE
+        vc.param1 = 1.0  # PX4_CUSTOM
+        vc.param2 = 6.0  # MAIN_MODE_OFFBOARD
+        vc.target_system = 1
+        vc.target_component = 1
+        vc.source_system = 1
+        vc.source_component = 1
+        vc.from_external = True
+        self.pub_cmd.publish(vc)
+        self.get_logger().info("Sent VEHICLE_CMD_DO_SET_MODE -> OFFBOARD")
+
+    def arm(self, t_us: int, arm: bool):
+        vc = VehicleCommand()
+        vc.timestamp = t_us
+        vc.command = VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM
+        vc.param1 = 1.0 if arm else 0.0
+        vc.target_system = 1
+        vc.target_component = 1
+        vc.source_system = 1
+        vc.source_component = 1
+        vc.from_external = True
+        self.pub_cmd.publish(vc)
+        self.get_logger().info(f"Sent ARM command: {arm}")
+
+    def set_actuator_set1(self, t_us: int, value_norm: float):
+        vc = VehicleCommand()
+        vc.timestamp = t_us
+        vc.command = 187  # MAV_CMD_DO_SET_ACTUATOR
+        vc.param1 = float(clamp(value_norm, -1.0, 1.0))  # Set 1 -> MAIN3
+        vc.target_system = 1
+        vc.target_component = 1
+        vc.source_system = 1
+        vc.source_component = 1
+        vc.from_external = True
+        self.pub_cmd.publish(vc)
+
+    # --- Publisher ---
+    def pub_main_aux(self, t_us: int, thr: float, steer: float):
+        mot = ActuatorMotors()
+        mot.timestamp = t_us
+        mot.control = [float('nan')] * self.n_main
+
+        if 0 <= self.motor_index < self.n_main:
+            mot.control[self.motor_index] = thr
+            mot.reversible_flags = (1 << self.motor_index)
+
+        if self.steering_on_main and 0 <= self.steer_index_main < self.n_main:
+            mot.control[self.steer_index_main] = steer
+
+        self.pub_main.publish(mot)
+
+        if not self.steering_on_main:
+            srv = ActuatorServos()
+            srv.timestamp = t_us
+            srv.control = [float('nan')] * self.n_aux
+            if 0 <= self.steer_index_aux < self.n_aux:
+                srv.control[self.steer_index_aux] = steer
+            self.pub_aux.publish(srv)
+
+    # --- Main loop ---
+    def tick(self):
+        now = self.get_clock().now()
+        t_us = now.nanoseconds // 1000
+
+        self.hb_offboard_mode(t_us)
+
+        if self.warm_cnt < self.warmup_ticks:
+            self.pub_main_aux(t_us, -self.throttle_bias, 0.0)
+            self.set_actuator_set1(t_us, -self.tool_bias)
+
+            self.get_logger().info(
+                f"WARMUP {self.warm_cnt + 1}/{self.warmup_ticks} "
+                f"| thr={-self.throttle_bias:.2f} steer=0.00 tool={-self.tool_bias:.2f}"
+            )
+
+            self.warm_cnt += 1
+            return
+
+        if not self.offboard:
+            self.set_offboard(t_us)
+            self.offboard = True
+            self.get_logger().info("OFFBOARD activated")
+
+        if not self.armed:
+            self.arm(t_us, True)
+            self.armed = True
+            self.get_logger().info("ARM command sent")
+
+        # Deadman stop
+        age = (now - self.last_cmd_ts).nanoseconds * 1e-9
+        timed_out = age > self.deadman
+
+        raw_thr = 0.0
+        steer = 0.0
+        raw_tool = 0.0
+
+        state_reason = "TIMEOUT/STOP"
+
+        if not (self.force_stop or timed_out):
+            raw_thr = clamp(self.vx, -1.0, 1.0) * self.throttle_max
+            steer = clamp(self.wz, -1.0, 1.0) * self.steer_max
+            raw_tool = clamp(self.vz, -1.0, 1.0)
+            state_reason = "LIVE_CMD"
+
+        if self.invert_speed:
+            raw_thr = -raw_thr
+        if self.invert_steer:
+            steer = -steer
+
+        thr = clamp(raw_thr - self.throttle_bias, -1.0, 1.0)
+        tool = clamp(raw_tool + self.tool_bias, -1.0, 1.0)
+
+        self.pub_main_aux(t_us, thr, steer)
+        self.set_actuator_set1(t_us, tool)
+
+        # Print when timeout starts/stops
+        if timed_out and not self._last_timeout_state:
+            self.get_logger().warn(
+                f"cmd_vel TIMEOUT START | age={age:.3f}s > deadman={self.deadman:.3f}s "
+                f"| last vx={self.vx:.3f}, wz={self.wz:.3f}, vz={self.vz:.3f}"
+            )
+        if (not timed_out) and self._last_timeout_state:
+            self.get_logger().info(
+                f"cmd_vel TIMEOUT END | age={age:.3f}s | cmd stream resumed"
+            )
+        self._last_timeout_state = timed_out
+
+        # Print when force_stop changes
+        if self.force_stop and not self._last_force_stop_state:
+            self.get_logger().warn("force_stop ACTIVE")
+        if (not self.force_stop) and self._last_force_stop_state:
+            self.get_logger().info("force_stop CLEARED")
+        self._last_force_stop_state = self.force_stop
+
+        # Debug output every tick for deep debugging
+        self.get_logger().info(
+            f"TICK | mode={state_reason} | age={age:.3f}s | "
+            f"vx={self.vx:.3f}, wz={self.wz:.3f}, vz={self.vz:.3f} | "
+            f"raw_thr={raw_thr:.3f}, steer={steer:.3f}, raw_tool={raw_tool:.3f} | "
+            f"thr={thr:.3f}, tool={tool:.3f}"
+        )
+
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = CmdVelToPx4Rover()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()

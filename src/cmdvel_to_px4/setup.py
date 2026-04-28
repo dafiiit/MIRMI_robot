@@ -13,6 +13,7 @@ setup(
         ('share/' + package_name + '/launch', [
             'launch/px4_bridge.launch.py',
             'launch/startup_combined.launch.py',
+            'launch/livox_remote.launch.py',
         ]),
     ],
     install_requires=['setuptools'],
@@ -31,7 +32,9 @@ setup(
              'cmdvel_to_px4 = cmdvel_to_px4.cmdvel_node:main',
              'cmdvel_to_px4_2 = cmdvel_to_px4.cmdvel_node2:main',
              'cmdvel_to_px4_3 = cmdvel_to_px4.cmdvel_node3:main',
+             'cmdvel_to_px4_4 = cmdvel_to_px4.cmdvel_node4:main',
              'process_manager = cmdvel_to_px4.process_manager_node:main',
+             'livox_remote_relay = cmdvel_to_px4.livox_remote_relay:main',
         ],
     },
 )
