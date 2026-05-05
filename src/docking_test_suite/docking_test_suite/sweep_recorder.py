@@ -103,6 +103,8 @@ class SweepRecorder:
         '/sweep_test/status',
         '/sweep_test/capturing',
         '/sweep_test/target_placement',
+        '/tf',
+        '/tf_static',
     ]
 
     def __init__(self, node: Node, config: dict, sensors: str = 'both'):
@@ -120,6 +122,11 @@ class SweepRecorder:
         self.sensors = sensors  # updated by caller before start()
         self._sc = config.get('sweep_test', {}).get('sensors', {})
         self._rec_cfg = config.get('recording', {})
+
+        # Add odometry topic dynamically from config to always bag topics
+        odom_topic = config.get('topics', {}).get('px4_odometry', '/fmu/out/vehicle_odometry')
+        if odom_topic not in self._ALWAYS_BAG_TOPICS:
+            self._ALWAYS_BAG_TOPICS.append(odom_topic)
 
         # State
         self._recording = False
