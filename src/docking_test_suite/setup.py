@@ -42,19 +42,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            # Test executables
-            'test_a_distance = docking_test_suite.test_a_distance:main',
-            'test_b_angular = docking_test_suite.test_b_angular:main',
-            'test_c_dynamic = docking_test_suite.test_c_dynamic:main',
-            'test_d_environmental = docking_test_suite.test_d_environmental:main',
-
-            # Debug / utility tools
-            'robot_driver_cli = docking_test_suite.robot_driver:main',
-            'docking_diagnostics = docking_test_suite.diagnostics:main',
-            'gdrive_upload = docking_test_suite.gdrive_uploader:main',
-            'docking_analyze = docking_test_suite.analysis:main',
-            # TF utilities
-            'pose_tf_broadcaster = docking_test_suite.pose_tf_broadcaster:main',
+            # Sensor sweep test (topic-driven, no robot driving)
+            'sensor_sweep = docking_test_suite.sensor_sweep_node:main',
         ],
     },
 )

@@ -1,4 +1,4 @@
-"""Launch file for Test B: Static Angular Profile."""
+"""Launch file for the Sensor Sweep Test Node."""
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
@@ -8,13 +8,15 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     config_arg = DeclareLaunchArgument(
-        'config_path', default_value='',
-        description='Path to test_config.yaml (empty = use default)')
+        'config_path',
+        default_value='',
+        description='Absolute path to test_config.yaml (leave empty for default)',
+    )
 
-    test_node = Node(
+    sweep_node = Node(
         package='docking_test_suite',
-        executable='test_b_angular',
-        name='test_b_angular',
+        executable='sensor_sweep',
+        name='sensor_sweep_node',
         output='screen',
         emulate_tty=True,
         parameters=[{
@@ -22,4 +24,4 @@ def generate_launch_description():
         }],
     )
 
-    return LaunchDescription([config_arg, test_node])
+    return LaunchDescription([config_arg, sweep_node])

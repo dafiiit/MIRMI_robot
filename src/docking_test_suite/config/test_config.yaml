@@ -124,15 +124,46 @@ system:
     angle_tolerance: 2.0      # degrees (closed-loop turn threshold)
 
 # -----------------------------------------------------------------------------
+# SWEEP TEST SETTINGS  (sensor_sweep_node  —  topic-driven, no robot driving)
+# -----------------------------------------------------------------------------
+sweep_test:
+  capture_duration: 10.0          # seconds per step
+  output_dir: "~/sweep_test_data"  # local directory for CSV + bags
+
+  distance_sweep:
+    start_m: 10.0   # farthest distance (m)
+    stop_m:  1.0    # closest distance  (m)
+    step_m:  1.0    # increment between steps (m)
+
+  angular_sweep:
+    fixed_distance_m: 3.0   # target distance for all steps (m)
+    start_deg:  0           # starting angle (0 = directly forward)
+    stop_deg:  180          # final angle
+    step_deg:   20          # angular increment (degrees)
+
+  # Topic names used for recording — adjust if your setup differs
+  sensors:
+    camera_raw_topic:       "/camera/camera/color/image_raw"
+    camera_info_topic:      "/camera/camera/color/camera_info"
+    camera_overlay_topic:   "/apriltag/overlay/compressed"
+    apriltag_topic:         "/tag_detections"
+    lidar_raw_topic:        "/livox/lidar"           # raw PointCloud2
+    lidar_detection_topic:  "/station_confidence"    # Float32 from StationDetector
+
+# -----------------------------------------------------------------------------
 # GOOGLE DRIVE UPLOAD
 # -----------------------------------------------------------------------------
 google_drive:
-  enabled: false
-  # Path to OAuth2 credentials JSON downloaded from Google Cloud Console.
-  # See README for setup instructions.
+  enabled: true
+  # --- rclone method (preferred, same as backup_data.sh) ---
+  # Run 'rclone config' once to create a remote named 'gdrive'.
+  rclone_remote: "gdrive"              # rclone remote name
+  remote_folder: "sweep_test_data"     # destination folder on Google Drive
+  auto_upload: true                    # upload automatically after each step
+
+  # --- OAuth2 Python API fallback (gdrive_uploader.py) ---
+  # Path to credentials JSON from Google Cloud Console.
   credentials_file: "~/docking_test_data/credentials.json"
-  token_file: "~/docking_test_data/token.json"
-  # Google Drive folder ID (from the folder URL)
+  token_file:       "~/docking_test_data/token.json"
+  # Google Drive folder ID (from the folder URL) — required for API fallback
   folder_id: ""
-  # Automatically upload after each test completes
-  auto_upload: false

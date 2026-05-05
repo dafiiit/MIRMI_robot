@@ -46,14 +46,14 @@ def load_config(path: str = None) -> dict:
 
 def _validate(cfg: dict):
     """Minimal sanity checks on required keys."""
-    required_sections = ['topics', 'calibration', 'recording', 'system']
-    for s in required_sections:
-        if s not in cfg:
-            raise KeyError(f'Missing required config section: {s}')
+    # Only the 'topics' section is checked for the original tests.
+    # The sweep_test node only needs 'sweep_test' + 'google_drive', which are
+    # validated at runtime inside sensor_sweep_node.py, not here.
+    if 'topics' not in cfg:
+        return  # sweep-only config — skip topic checks
 
     t = cfg['topics']
-    for key in ['vicon_robot_pose', 'vicon_target_pose', 'apriltag_detections',
-                'camera_info', 'cmd_vel', 'detection_msg_type']:
+    for key in ['apriltag_detections', 'camera_info', 'cmd_vel', 'detection_msg_type']:
         if key not in t:
             raise KeyError(f'Missing required topic config: topics.{key}')
 
@@ -62,9 +62,12 @@ def _validate(cfg: dict):
             f"detection_msg_type must be 'apriltag_msgs' or 'isaac_ros', "
             f"got '{t['detection_msg_type']}'")
 
-    cal = cfg['calibration']
+    # Calibration checks only apply to the original tests that use Vicon
+    cal = cfg.get('calibration', {})
     for offset_key in ['vicon_target_to_real_target', 'vicon_robot_to_camera']:
-        off = cal.get(offset_key, {})
+        off = cal.get(offset_key)
+        if off is None:
+            continue  # optional when not using Vicon
         if 'translation' not in off or 'rotation' not in off:
             raise KeyError(
                 f'calibration.{offset_key} must define translation and rotation')
@@ -72,6 +75,7 @@ def _validate(cfg: dict):
             raise ValueError(f'calibration.{offset_key}.translation must have 3 elements')
         if len(off['rotation']) != 4:
             raise ValueError(f'calibration.{offset_key}.rotation must have 4 elements')
+
 
 
 def get_output_dir(cfg: dict) -> str:
