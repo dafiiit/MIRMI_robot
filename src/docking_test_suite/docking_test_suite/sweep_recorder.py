@@ -142,6 +142,10 @@ class SweepRecorder:
         self._image_dir = None
 
         self._latest_px4_odom = None
+        self._latest_det = None
+        
+        record_rate = self._rec_cfg.get('record_rate_hz', 10.0)
+        self._record_timer = self.node.create_timer(1.0 / record_rate, self._record_timer_cb)
 
         # LiDAR detection state (from /station_confidence + /station_marker)
         self._lidar_confidence = _nan()
@@ -229,17 +233,21 @@ class SweepRecorder:
         self._lidar_detected = True
 
     def _apriltag_cb(self, det_msg):
-        """Called on every AprilTag detection array; records a row if active."""
+        """Called on every AprilTag detection array."""
+        if det_msg.detections:
+            self._latest_det = det_msg.detections[0]
+        else:
+            self._latest_det = None
+
+    def _record_timer_cb(self):
+        """Timer callback to sample all sensors synchronously."""
         if not self._recording or self._abort:
-            return
-        if not det_msg.detections:
             return
 
         now_ns = self.node.get_clock().now().nanoseconds
         elapsed = (now_ns - self._start_ns) / 1e9
 
-        det = det_msg.detections[0]
-        row = self._build_row(now_ns, elapsed, det)
+        row = self._build_row(now_ns, elapsed, self._latest_det)
 
         with self._lock:
             self._buffer.append(row)
@@ -260,13 +268,16 @@ class SweepRecorder:
 
     def _build_row(self, now_ns, elapsed, det):
         nan = _nan()
-        tag_id, center, corners = self._extract_detection(det)
+        if det is not None:
+            tag_id, center, corners = self._extract_detection(det)
+        else:
+            tag_id, center, corners = -1, (nan, nan), []
 
         # solvePnP
         tvec, rvec, ok = (None, None, False)
         cal = self.cfg.get('calibration', {})
         tag_size = cal.get('tag_size', 0.162)
-        if self._camera_matrix is not None:
+        if self._camera_matrix is not None and len(corners) == 4:
             tvec, rvec, ok = estimate_tag_pose_pnp(
                 corners, self._camera_matrix, self._dist_coeffs, tag_size)
 
@@ -423,14 +434,13 @@ class SweepRecorder:
         output_dir : str
             Expanded absolute path to the output directory.
         """
-        ts = time.strftime('%Y%m%d_%H%M%S')
-        mode_short = 'in' if mode == 'indoor' else 'out'
-        scen_short = 'dist' if scenario == 'distance' else 'ang'
-        base_name = f'{ts}_{mode_short}_{scen_short}_{step_label}'
-
         self._step_label = step_label
         self._scenario = scenario
         self._mode = mode
+        
+        # Output directory now contains the sweep configuration and timestamp
+        base_name = step_label
+
         self._start_ns = self.node.get_clock().now().nanoseconds
         self._abort = False
 

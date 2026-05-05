@@ -104,6 +104,7 @@ class SensorSweepNode(Node):
         self._capture_start_ns = None
         self._last_csv = ''
         self._last_bag = ''
+        self._current_sweep_dir = self._output_dir
         self._gdrive_ok = None   # None = not attempted, True/False = result
         self._state_lock = threading.Lock()
 
@@ -212,6 +213,24 @@ class SensorSweepNode(Node):
                 )
 
             self._step_index = max(0, min(step_index, len(self._steps) - 1))
+            
+            # Generate folder structure for this sweep
+            if step_index == 0 or not getattr(self, '_current_sweep_dir', None) or self._current_sweep_dir == self._output_dir:
+                ts = time.strftime('%Y%m%d_%H%M%S')
+                mode_short = 'in' if mode == 'indoor' else 'out'
+                scen_short = 'dist' if scenario == 'distance' else 'ang'
+                sweep_folder_name = f'{ts}_{mode_short}_{scen_short}_{sensors}'
+
+                if sensors == 'camera':
+                    main_folder = 'camera_series'
+                elif sensors == 'lidar':
+                    main_folder = 'lidar_series'
+                else:
+                    main_folder = 'combined_series'
+                
+                self._current_sweep_dir = os.path.join(self._output_dir, main_folder, sweep_folder_name)
+                os.makedirs(self._current_sweep_dir, exist_ok=True)
+            
             self._state = STATE_CONFIGURED
             self._last_csv = ''
             self._last_bag = ''
@@ -241,7 +260,7 @@ class SensorSweepNode(Node):
                 return
 
             self._state = STATE_CAPTURING
-            self._capture_start_ns = self.node.get_clock().now().nanoseconds
+            self._capture_start_ns = self.get_clock().now().nanoseconds
 
         step = self._steps[self._step_index]
         self.get_logger().info(
@@ -261,7 +280,7 @@ class SensorSweepNode(Node):
             step_label=step['label'],
             scenario=self._scenario,
             mode=self._mode,
-            output_dir=self._output_dir,
+            output_dir=self._current_sweep_dir,
         )
 
         # Spawn capture timer in background
@@ -354,13 +373,33 @@ class SensorSweepNode(Node):
         upload_ok = None
         if gd.get('enabled', False) and gd.get('auto_upload', False):
             remote = gd.get('rclone_remote', 'gdrive')
-            folder = gd.get('remote_folder', 'sweep_test_data')
+            base_remote_folder = gd.get('remote_folder', 'sweep_test_data')
+            
+            # Preserve the nested folder structure on the remote
+            try:
+                rel_path = os.path.relpath(self._current_sweep_dir, self._output_dir)
+                remote_folder = os.path.join(base_remote_folder, rel_path).replace('\\', '/')
+            except ValueError:
+                remote_folder = base_remote_folder
+
             # Upload CSV
-            ok1 = rclone_upload(csv_path, remote, folder, self.get_logger())
-            # Upload bag directory
-            ok2 = rclone_upload(bag_dir, remote, folder, self.get_logger()) \
+            ok1 = rclone_upload(csv_path, remote, remote_folder, self.get_logger())
+            
+            # Upload bag directory (rclone copy copies contents, so we append the dir name to the target)
+            bag_remote_folder = remote_folder
+            if os.path.isdir(bag_dir):
+                bag_remote_folder = f"{remote_folder}/{os.path.basename(bag_dir)}"
+            ok2 = rclone_upload(bag_dir, remote, bag_remote_folder, self.get_logger()) \
                 if os.path.isdir(bag_dir) else True
-            upload_ok = ok1 and ok2
+            
+            # Upload images if they exist
+            ok3 = True
+            image_dir = self._recorder._image_dir
+            if image_dir and os.path.isdir(image_dir):
+                img_remote_folder = f"{remote_folder}/{os.path.basename(image_dir)}"
+                ok3 = rclone_upload(image_dir, remote, img_remote_folder, self.get_logger())
+                
+            upload_ok = ok1 and ok2 and ok3
 
             # Fallback to OAuth2 Python API if rclone failed
             if not upload_ok:
@@ -394,7 +433,7 @@ class SensorSweepNode(Node):
     def _capture_remaining(self) -> float:
         if self._capture_start_ns is None:
             return 0.0
-        elapsed = (self.node.get_clock().now().nanoseconds - self._capture_start_ns) / 1e9
+        elapsed = (self.get_clock().now().nanoseconds - self._capture_start_ns) / 1e9
         return max(0.0, self._capture_duration - elapsed)
 
     def _publish_placement(self):
