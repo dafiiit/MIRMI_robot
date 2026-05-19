@@ -25,6 +25,7 @@ from isaac_ros_apriltag_interfaces.msg import AprilTagDetectionArray
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import CompressedImage, Image
+from std_msgs.msg import String
 
 # ---------------------------------------------------------------------------
 # GPU JPEG encoder – GStreamer nvjpegenc (Jetson hardware)
@@ -142,10 +143,19 @@ class AprilTagVisualizer(Node):
         self.annotated_pub = self.create_publisher(
             CompressedImage, '/camera/tag_detections_image/compressed', qos_out)
 
+        # Health status tracking
+        self.last_image_time = 0.0
+        self.last_recognition_time = 0.0
+        self.pub_status = self.create_publisher(String, '/apriltag/status', 10)
+        self.status_timer = self.create_timer(1.0, self.publish_status)
+
     def detection_callback(self, msg: AprilTagDetectionArray) -> None:
         self.latest_detections = msg
+        if len(msg.detections) > 0:
+            self.last_recognition_time = self.get_clock().now().nanoseconds / 1e9
 
     def image_callback(self, msg: Image) -> None:
+        self.last_image_time = self.get_clock().now().nanoseconds / 1e9
         # 1. Skip when no one is watching – saves all downstream work
         if self.annotated_pub.get_subscription_count() == 0:
             return
@@ -199,6 +209,18 @@ class AprilTagVisualizer(Node):
 
         except Exception as e:
             self.get_logger().error(f'Visualizer error: {e}')
+
+    def publish_status(self) -> None:
+        now = self.get_clock().now().nanoseconds / 1e9
+        data_received = (now - self.last_image_time) < 2.0
+        
+        topic_posted = self.count_publishers(self.image_sub.topic_name) > 0
+        
+        recognized = (now - self.last_recognition_time) < 2.0
+        
+        status_msg = String()
+        status_msg.data = f"data_received:{str(data_received).lower()},topic_posted:{str(topic_posted).lower()},recognized:{str(recognized).lower()}"
+        self.pub_status.publish(status_msg)
 
     def destroy_node(self) -> None:
         if self._gst_encoder is not None:

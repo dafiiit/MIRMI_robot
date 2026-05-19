@@ -9,7 +9,7 @@ def generate_launch_description():
         name='livox_remote_relay',
         output='screen',
         parameters=[{
-            'input_topic': '/livox/lidar',
+            'input_topic': '/_livox/lidar',
             'output_topic': '/livox/lidar_remote',
             'decimation_stride': 4,
             'output_hz': 2.0,

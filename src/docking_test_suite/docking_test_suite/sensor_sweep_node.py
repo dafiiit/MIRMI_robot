@@ -99,6 +99,8 @@ class SensorSweepNode(Node):
         self._mode = ''
         self._scenario = ''
         self._sensors = 'both'
+        self._distance = 0.0
+        self._angle = 0.0
         self._steps = []
         self._step_index = 0
         self._capture_start_ns = None
@@ -199,6 +201,8 @@ class SensorSweepNode(Node):
             self._mode = mode
             self._scenario = scenario
             self._sensors = sensors
+            self._distance = distance
+            self._angle = angle
             self._recorder.sensors = sensors
             self._gdrive_ok = None
 
@@ -486,6 +490,8 @@ class SensorSweepNode(Node):
             mode = self._mode
             scenario = self._scenario
             sensors = self._sensors
+            distance = self._distance
+            angle = self._angle
             last_csv = self._last_csv
             gdrive_ok = self._gdrive_ok
 
@@ -500,14 +506,28 @@ class SensorSweepNode(Node):
         if steps and step_idx < step_total:
             step_label = steps[step_idx]['label']
 
+        # Get target placement instruction
+        if not steps or state in (STATE_IDLE, STATE_DONE):
+            instruction = (
+                'No scenario configured. Send configure message to begin.'
+            ) if state == STATE_IDLE else \
+                'All steps complete! Send configure message to run again.'
+        elif step_idx >= step_total:
+            instruction = 'All steps complete!'
+        else:
+            instruction = steps[step_idx]['instruction']
+
         status = {
             'state':              state,
             'mode':               mode,
             'scenario':           scenario,
             'sensors':            sensors,
+            'distance':           distance,
+            'angle':              angle,
             'step_index':         step_idx,
             'step_total':         step_total,
             'step_label':         step_label,
+            'instruction':        instruction,
             'capturing':          capturing,
             'capture_elapsed_s':  round(elapsed_s, 2),
             'capture_duration_s': self._capture_duration,

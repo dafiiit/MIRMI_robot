@@ -8,7 +8,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs_py import point_cloud2
-from std_msgs.msg import Float32
+from std_msgs.msg import Float32, String
 from visualization_msgs.msg import Marker
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
@@ -82,10 +82,16 @@ class StationDetector(Node):
         self.pub_conf = self.create_publisher(Float32, "/station_confidence", qos)
         self.pub_marker = self.create_publisher(Marker, "/station_marker", qos)
 
+        # Health status tracking
+        self.last_cloud_time = 0.0
+        self.last_recognition_time = 0.0
+        self.pub_status = self.create_publisher(String, "/lidar/status", 10)
+        self.status_timer = self.create_timer(1.0, self.publish_status)
 
         self.get_logger().info(f"StationDetector listening on {cloud_topic}")
 
     def on_cloud(self, msg: PointCloud2) -> None:
+        self.last_cloud_time = self.get_clock().now().nanoseconds / 1e9
         z_min = float(self.get_parameter("z_min").value)
         z_max = float(self.get_parameter("z_max").value)
         grid_res = float(self.get_parameter("grid_res").value)
@@ -269,6 +275,7 @@ class StationDetector(Node):
                 best_station = (box_center, yaw)
 
         if best_station is not None:
+            self.last_recognition_time = self.get_clock().now().nanoseconds / 1e9
             box_center, yaw = best_station
             
             # Publish Confidence
@@ -314,6 +321,19 @@ class StationDetector(Node):
             marker.lifetime = rclpy.duration.Duration(seconds=0, nanoseconds=500000000).to_msg()
             
             self.pub_marker.publish(marker)
+
+    def publish_status(self) -> None:
+        now = self.get_clock().now().nanoseconds / 1e9
+        data_received = (now - self.last_cloud_time) < 2.0
+        
+        cloud_topic = str(self.get_parameter("cloud_topic").value)
+        topic_posted = self.count_publishers(cloud_topic) > 0
+        
+        recognized = (now - self.last_recognition_time) < 2.0
+        
+        status_msg = String()
+        status_msg.data = f"data_received:{str(data_received).lower()},topic_posted:{str(topic_posted).lower()},recognized:{str(recognized).lower()}"
+        self.pub_status.publish(status_msg)
 
 def main(args=None):
     rclpy.init(args=args)

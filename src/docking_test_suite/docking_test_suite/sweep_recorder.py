@@ -409,7 +409,7 @@ class SweepRecorder:
             ]
         if self.sensors in ('lidar', 'both'):
             topics += [
-                sc.get('lidar_raw_topic',       '/livox/lidar'),
+                sc.get('lidar_raw_topic',       '/_livox/lidar'),
                 sc.get('lidar_detection_topic', '/station_confidence'),
                 '/station_marker',
             ]

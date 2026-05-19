@@ -124,7 +124,7 @@ class ProcessManagerNode(Node):
                 '-p min_height:=0.35 '
                 '-p max_height:=1.0 '
                 '-p range_min:=0.30 '
-                '--remap cloud_in:=/livox/lidar '
+                '--remap cloud_in:=/_livox/lidar '
                 '--remap scan:=/scan'
             ],
 

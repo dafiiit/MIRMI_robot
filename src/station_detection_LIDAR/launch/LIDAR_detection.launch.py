@@ -8,6 +8,7 @@ from launch.actions import DeclareLaunchArgument
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
+from launch_ros.actions import SetRemap
 
 def generate_launch_description():
     pkg_name = 'station_detection_LIDAR'
@@ -48,7 +49,7 @@ def generate_launch_description():
         name='station_detector',
         output='screen',
         parameters=[{
-            'cloud_topic': '/livox/lidar',
+            'cloud_topic': '/_livox/lidar',
             'z_min': 0.10,
             'z_max': 2.20,
             'grid_res': 0.10,
@@ -66,6 +67,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        SetRemap(src='/livox/lidar', dst='/_livox/lidar'),
         start_livox_arg,
         *livox_actions,
         detector_node

@@ -14,7 +14,7 @@ class LivoxRemoteRelay(Node):
     def __init__(self):
         super().__init__('livox_remote_relay')
 
-        self.declare_parameter('input_topic', '/livox/lidar')
+        self.declare_parameter('input_topic', '/_livox/lidar')
         self.declare_parameter('output_topic', '/livox/lidar_remote')
         self.declare_parameter('decimation_stride', 4)
         self.declare_parameter('output_hz', 2.0)

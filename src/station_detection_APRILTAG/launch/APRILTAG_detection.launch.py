@@ -39,6 +39,7 @@ def generate_launch_description():
             'pointcloud.enable': False,
             'enable_color': True,
             'enable_depth': False,
+            'rgb_camera.power_line_frequency': 2,
             # 1920x1080 @ 15fps was ~75% CPU. 848x480 @ 6fps was prior setting.
             # 1280x720 @ 6fps gives 2.25x more pixels for better tag detection
             # at longer range, while keeping fps low to limit CPU/DDS load.
