@@ -155,7 +155,7 @@ class SensorSweepNode(Node):
             '\nSend a configure message to begin:\n'
             '  ros2 topic pub --once /sweep_test/cmd/configure std_msgs/String \\\n'
             '    \'data: "{\\\"mode\\\":\\\"outdoor\\\","'
-            '\\\"scenario\\\":\\\"distance\\\",\\\"sensors\\\":\\\"both\\\"}"\''
+            '\\\"scenario\\\":\\\"custom\\\",\\\"sensors\\\":\\\"both\\\",\\\"distance\\\":10.0,\\\"angle\\\":0.0}"\''
         )
 
     # ── Command callbacks ────────────────────────────────────────────────────
@@ -167,22 +167,23 @@ class SensorSweepNode(Node):
         except json.JSONDecodeError as e:
             self.get_logger().error(
                 f'[configure] Invalid JSON: {e}\n'
-                f'  Expected: {{"mode":"outdoor","scenario":"distance","sensors":"both"}}')
+                f'  Expected: {{"mode":"outdoor","scenario":"custom","sensors":"both","distance":10.0,"angle":0.0}}')
             return
 
         mode = data.get('mode', 'outdoor')
-        scenario = data.get('scenario', 'distance')
+        scenario = data.get('scenario', 'custom')
         sensors = data.get('sensors', 'both')
-        step_index = int(data.get('step_index', 0))
+        distance = float(data.get('distance', 0.0))
+        angle = float(data.get('angle', 0.0))
 
         # Validate
         if mode not in ('indoor', 'outdoor'):
             self.get_logger().error(
                 f'[configure] Invalid mode "{mode}". Use "indoor" or "outdoor".')
             return
-        if scenario not in ('distance', 'angular'):
+        if scenario not in ('distance', 'angular', 'custom'):
             self.get_logger().error(
-                f'[configure] Invalid scenario "{scenario}". Use "distance" or "angular".')
+                f'[configure] Invalid scenario "{scenario}". Use "distance", "angular", or "custom".')
             return
         if sensors not in ('camera', 'lidar', 'both'):
             self.get_logger().error(
@@ -201,31 +202,30 @@ class SensorSweepNode(Node):
             self._recorder.sensors = sensors
             self._gdrive_ok = None
 
-            # Build step list
-            sweep_cfg = self.cfg.get('sweep_test', {})
-            if scenario == 'distance':
-                ds = sweep_cfg.get('distance_sweep', {})
-                self._steps = distance_sweep_steps(
-                    start_m=float(ds.get('start_m', 10.0)),
-                    stop_m=float(ds.get('stop_m', 1.0)),
-                    step_m=float(ds.get('step_m', 1.0)),
-                )
-            else:
-                as_ = sweep_cfg.get('angular_sweep', {})
-                self._steps = angular_sweep_steps(
-                    fixed_dist_m=float(as_.get('fixed_distance_m', 3.0)),
-                    start_deg=int(as_.get('start_deg', 0)),
-                    stop_deg=int(as_.get('stop_deg', 180)),
-                    step_deg=int(as_.get('step_deg', 20)),
-                )
+            # Build single step
+            sign = 'p' if angle >= 0 else 'n'
+            label = f"dist_{distance:04.1f}m_ang_{sign}{abs(int(angle)):03d}deg".replace('.', 'p')
 
-            self._step_index = max(0, min(step_index, len(self._steps) - 1))
+            instruction = (
+                f"[MEASUREMENT] "
+                f"Place the target at {distance:.1f} m and {angle}°."
+            )
+
+            self._steps = [{
+                'label': label,
+                'value': distance,
+                'instruction': instruction,
+                'scenario': scenario,
+                'distance': distance,
+                'angle': angle
+            }]
+            self._step_index = 0
             
             # Generate folder structure for this sweep
-            if step_index == 0 or not getattr(self, '_current_sweep_dir', None) or self._current_sweep_dir == self._output_dir:
+            if not getattr(self, '_current_sweep_dir', None) or self._current_sweep_dir == self._output_dir or getattr(self, '_last_mode', None) != mode or getattr(self, '_last_scenario', None) != scenario or getattr(self, '_last_sensors', None) != sensors:
                 ts = time.strftime('%Y%m%d_%H%M%S')
                 mode_short = 'in' if mode == 'indoor' else 'out'
-                scen_short = 'dist' if scenario == 'distance' else 'ang'
+                scen_short = 'dist' if scenario == 'distance' else ('ang' if scenario == 'angular' else 'cust')
                 sweep_folder_name = f'{ts}_{mode_short}_{scen_short}_{sensors}'
 
                 if sensors == 'camera':
@@ -237,6 +237,10 @@ class SensorSweepNode(Node):
                 
                 self._current_sweep_dir = os.path.join(self._output_dir, main_folder, sweep_folder_name)
                 os.makedirs(self._current_sweep_dir, exist_ok=True)
+                
+                self._last_mode = mode
+                self._last_scenario = scenario
+                self._last_sensors = sensors
             
             self._state = STATE_CONFIGURED
             self._last_csv = ''
@@ -244,8 +248,8 @@ class SensorSweepNode(Node):
 
         self.get_logger().info(
             f'[configure] ✓ mode={mode}  scenario={scenario}  '
-            f'sensors={sensors}  steps={len(self._steps)}  '
-            f'starting at step {self._step_index + 1}')
+            f'sensors={sensors}  distance={distance}m  angle={angle}deg  '
+            f'step={label}')
 
         self._publish_placement()
 
@@ -457,7 +461,7 @@ class SensorSweepNode(Node):
                 'Send a configure message:\n'
                 '  ros2 topic pub --once /sweep_test/cmd/configure std_msgs/String \\\n'
                 '    \'data: "{\\\"mode\\\":\\\"outdoor\\\","'
-                '\\\"scenario\\\":\\\"distance\\\",\\\"sensors\\\":\\\"both\\\"}"\''
+                '\\\"scenario\\\":\\\"custom\\\",\\\"sensors\\\":\\\"both\\\",\\\"distance\\\":10.0,\\\"angle\\\":0.0}"\''
             ) if state == STATE_IDLE else \
                 '[SWEEP TEST]  All steps complete! Send /configure to run again.'
         elif idx >= len(steps):
