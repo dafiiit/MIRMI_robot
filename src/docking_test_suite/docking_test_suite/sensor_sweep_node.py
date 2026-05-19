@@ -120,6 +120,8 @@ class SensorSweepNode(Node):
         self._pub_step_done = self.create_publisher(
             String, '/sweep_test/step_complete', 10)
 
+        self._pub_upload_status = self.create_publisher(String, '/sweep_test/upload_status', 10)
+
         # ── Subscribers (trigger topics) ─────────────────────────────────
         self.create_subscription(
             String, '/sweep_test/cmd/configure',
@@ -130,6 +132,9 @@ class SensorSweepNode(Node):
         self.create_subscription(
             Empty, '/sweep_test/cmd/abort',
             self._cmd_abort_cb, 10)
+        self.create_subscription(
+            Empty, '/sweep_test/cmd/start_data_upload',
+            self._cmd_start_data_upload_cb, 10)
 
         # ── Status heartbeat timer (2 Hz) ────────────────────────────────
         self._status_timer = self.create_timer(0.5, self._status_timer_cb)
@@ -139,11 +144,13 @@ class SensorSweepNode(Node):
             '╔══════════════════════════════════════════════════════╗\n'
             '║         SENSOR SWEEP TEST NODE  —  READY             ║\n'
             '╠══════════════════════════════════════════════════════╣\n'
-            '║  Configure:  /sweep_test/cmd/configure  (String JSON) ║\n'
-            '║  Capture:    /sweep_test/cmd/capture    (Empty)       ║\n'
-            '║  Abort:      /sweep_test/cmd/abort      (Empty)       ║\n'
-            '║  Status:     /sweep_test/status         (echo)        ║\n'
-            '║  Placement:  /sweep_test/target_placement (echo)      ║\n'
+            '║  Configure:    /sweep_test/cmd/configure    (JSON)   ║\n'
+            '║  Capture:      /sweep_test/cmd/capture      (Empty)  ║\n'
+            '║  Abort:        /sweep_test/cmd/abort        (Empty)  ║\n'
+            '║  Upload:       /sweep_test/cmd/start_data_upload     ║\n'
+            '║  Status:       /sweep_test/status           (echo)   ║\n'
+            '║  Upload stat:  /sweep_test/upload_status    (echo)   ║\n'
+            '║  Placement:    /sweep_test/target_placement (echo)   ║\n'
             '╚══════════════════════════════════════════════════════╝\n'
             '\nSend a configure message to begin:\n'
             '  ros2 topic pub --once /sweep_test/cmd/configure std_msgs/String \\\n'
@@ -368,50 +375,7 @@ class SensorSweepNode(Node):
         })
         self._pub_step_done.publish(String(data=step_done_msg))
 
-        # ── Upload ───────────────────────────────────────────────────────
-        gd = self.cfg.get('google_drive', {})
-        upload_ok = None
-        if gd.get('enabled', False) and gd.get('auto_upload', False):
-            remote = gd.get('rclone_remote', 'gdrive')
-            base_remote_folder = gd.get('remote_folder', 'sweep_test_data')
-            
-            # Preserve the nested folder structure on the remote
-            try:
-                rel_path = os.path.relpath(self._current_sweep_dir, self._output_dir)
-                remote_folder = os.path.join(base_remote_folder, rel_path).replace('\\', '/')
-            except ValueError:
-                remote_folder = base_remote_folder
-
-            # Upload CSV
-            ok1 = rclone_upload(csv_path, remote, remote_folder, self.get_logger())
-            
-            # Upload bag directory (rclone copy copies contents, so we append the dir name to the target)
-            bag_remote_folder = remote_folder
-            if os.path.isdir(bag_dir):
-                bag_remote_folder = f"{remote_folder}/{os.path.basename(bag_dir)}"
-            ok2 = rclone_upload(bag_dir, remote, bag_remote_folder, self.get_logger()) \
-                if os.path.isdir(bag_dir) else True
-            
-            # Upload images if they exist
-            ok3 = True
-            image_dir = self._recorder._image_dir
-            if image_dir and os.path.isdir(image_dir):
-                img_remote_folder = f"{remote_folder}/{os.path.basename(image_dir)}"
-                ok3 = rclone_upload(image_dir, remote, img_remote_folder, self.get_logger())
-                
-            upload_ok = ok1 and ok2 and ok3
-
-            # Fallback to OAuth2 Python API if rclone failed
-            if not upload_ok:
-                self.get_logger().warn(
-                    '[upload] rclone failed — trying OAuth2 Google Drive API fallback')
-                try:
-                    maybe_upload(self.cfg, csv_path, self.get_logger())
-                    upload_ok = True
-                except Exception as e:
-                    self.get_logger().error(f'[upload] OAuth2 fallback also failed: {e}')
-
-        self._gdrive_ok = upload_ok
+        # Upload is now separated to /sweep_test/cmd/start_data_upload
 
         # ── Advance step ─────────────────────────────────────────────────
         with self._state_lock:
@@ -427,6 +391,50 @@ class SensorSweepNode(Node):
                 self._state = STATE_CONFIGURED
 
         self._publish_placement()
+
+    # ── Upload worker ────────────────────────────────────────────────────────
+
+    def _cmd_start_data_upload_cb(self, _msg: Empty):
+        """Trigger background upload of the current sweep data."""
+        t = threading.Thread(target=self._upload_worker, daemon=True)
+        t.start()
+
+    def _upload_worker(self):
+        self._publish_upload_status("UPLOADING")
+        gd = self.cfg.get('google_drive', {})
+        if not gd.get('enabled', False):
+            self.get_logger().warn('[upload] Google Drive upload is not enabled in config.')
+            self._publish_upload_status("FAILED", error="Google Drive upload is not enabled in config")
+            return
+
+        remote = gd.get('rclone_remote', 'gdrive')
+        base_remote_folder = gd.get('remote_folder', 'sweep_test_data')
+        
+        try:
+            rel_path = os.path.relpath(self._current_sweep_dir, self._output_dir)
+            remote_folder = os.path.join(base_remote_folder, rel_path).replace('\\', '/')
+        except ValueError:
+            remote_folder = base_remote_folder
+
+        self.get_logger().info(f'[upload] Starting upload of {self._current_sweep_dir} to {remote}:{remote_folder}')
+        
+        ok = rclone_upload(self._current_sweep_dir, remote, remote_folder, self.get_logger())
+        
+        if not ok:
+            self.get_logger().warn('[upload] rclone upload failed.')
+            self._publish_upload_status("FAILED", error="rclone upload failed")
+            self._gdrive_ok = False
+        else:
+            self.get_logger().info(f'[upload] ✓ Successfully uploaded {self._current_sweep_dir}')
+            self._publish_upload_status("COMPLETED")
+            self._gdrive_ok = True
+
+    def _publish_upload_status(self, status: str, error: str = ""):
+        msg = json.dumps({
+            "status": status,
+            "error": error
+        })
+        self._pub_upload_status.publish(String(data=msg))
 
     # ── Helpers ──────────────────────────────────────────────────────────────
 

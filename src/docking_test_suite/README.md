@@ -45,10 +45,17 @@ Once the target is placed at the specified location, trigger the 10-second captu
 ros2 topic pub --once /sweep_test/cmd/capture std_msgs/Empty '{}'
 ```
 
-Wait 10 seconds. The node will automatically save a CSV, a rosbag, upload them to Google Drive (if configured), and advance to the next step.
+Wait 10 seconds. The node will automatically save a CSV and a rosbag locally, and advance to the next step.
 Repeat the placement and capture process until all steps are complete.
 
-### 3.5 Aborting
+### 3.5 Uploading Data
+To upload the collected data for the current sweep to Google Drive (if configured), trigger the upload command:
+```bash
+ros2 topic pub --once /sweep_test/cmd/start_data_upload std_msgs/Empty '{}'
+```
+You can track the upload progress by monitoring the `/sweep_test/upload_status` topic.
+
+### 3.6 Aborting
 To immediately stop an ongoing capture and discard the data for the current step:
 ```bash
 ros2 topic pub --once /sweep_test/cmd/abort std_msgs/Empty '{}'

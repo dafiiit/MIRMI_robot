@@ -91,15 +91,39 @@ class ProcessManagerNode(Node):
                 "queue ! udpsink host=Rosamo port=5000"
             ],
 
+            'lq_camera_stream': [
+                'bash', '-c',
+                "gst-launch-1.0 nvarguscamerasrc sensor-id=0 ! "
+                "'video/x-raw(memory:NVMM), width=720, height=360, framerate=15/1' ! "
+                "queue ! nvvidconv ! "
+                "'video/x-raw(memory:NVMM), format=NV12' ! "
+                "queue ! nvv4l2h264enc bitrate=400000 profile=2 preset-level=1 "
+                "iframeinterval=30 idrinterval=30 insert-sps-pps=1 ! "
+                "queue ! rtph264pay config-interval=1 pt=96 ! "
+                "queue ! udpsink host=Rosamo port=5000"
+            ],
+            
+            'secondary_camera_stream': [
+                'bash', '-c',
+                "gst-launch-1.0 nvarguscamerasrc sensor-id=1 ! "
+                "'video/x-raw(memory:NVMM), width=960, height=480, framerate=24/1' ! "
+                "queue ! nvvidconv ! "
+                "'video/x-raw(memory:NVMM), format=NV12' ! "
+                "queue ! nvv4l2h264enc bitrate=1000000 profile=2 preset-level=1 "
+                "iframeinterval=30 idrinterval=30 insert-sps-pps=1 ! "
+                "queue ! rtph264pay config-interval=1 pt=96 ! "
+                "queue ! udpsink host=Rosamo port=5001"
+            ],
+
             'pointcloud_to_laserscan': [
                 'bash', '-lc',
                 'source /opt/ros/humble/setup.bash && '
                 'source ~/ws_sensor_combined/install/setup.bash && '
                 'ros2 run pointcloud_to_laserscan pointcloud_to_laserscan_node --ros-args '
                 '-p target_frame:=livox_frame '
-                '-p min_height:=0.1 '
+                '-p min_height:=0.35 '
                 '-p max_height:=1.0 '
-                '-p range_min:=0.1 '
+                '-p range_min:=0.30 '
                 '--remap cloud_in:=/livox/lidar '
                 '--remap scan:=/scan'
             ],
@@ -132,6 +156,43 @@ class ProcessManagerNode(Node):
                 'source /opt/ros/humble/setup.bash && '
                 'source ~/ws_sensor_combined/install/setup.bash && '
                 'ros2 run px4_odom_bridge px4_odom_bridge'
+            ],
+
+            'slam_toolbox': [
+                'bash', '-lc',
+                'source /opt/ros/humble/setup.bash && '
+                'source ~/ws_sensor_combined/install/setup.bash && '
+                'ros2 run slam_toolbox async_slam_toolbox_node --ros-args '
+                '-p odom_frame:=odom_filtered '
+                '-p map_frame:=map '
+                '-p base_frame:=base_link_ekf '
+                '-p scan_topic:=/scan '
+                '-p use_sim_time:=false '
+                '-p mode:=mapping '
+                '-p resolution:=0.15 '
+                '-p max_laser_range:=6.0 '
+                '-p map_update_interval:=0.5 '
+                '-p transform_publish_period:=0.1 '
+                '-p transform_timeout:=0.1 '
+                '-p minimum_time_interval:=0.0 '
+                '-p minimum_travel_distance:=0.0 '
+                '-p minimum_travel_heading:=0.0 '
+                '-p do_loop_closing:=true '
+                '-p stack_size_to_use:=40000000'
+            ],
+            
+            'rtk_ntrip': [
+                'bash', '-lc',
+                'set -eo pipefail; '
+                'NTRIP_URL="${NTRIP_URL:-ntrip://holybro:Rtk2026!@euref-ip.net:2101/OBE400DEU0}"; '
+                'RTK_SERIAL="${RTK_SERIAL:-ttyACM0}"; '
+                'RTK_BAUD="${RTK_BAUD:-115200}"; '
+                'str2str '
+                '-in "$NTRIP_URL" '
+                '-out serial://"$RTK_SERIAL":"$RTK_BAUD"'
+            ],
+            'docking_test_suite': [
+                'ros2', 'launch', 'docking_test_suite', 'sensor_sweep.launch.py'
             ],
         }
         #'-p range_max:=4.0 '

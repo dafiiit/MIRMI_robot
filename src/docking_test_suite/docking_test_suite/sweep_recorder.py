@@ -46,7 +46,7 @@ except ImportError:
     _HAS_APRILTAG_MSGS = False
 
 try:
-    from px4_msgs.msg import VehicleOdometry
+    from px4_msgs.msg import VehicleOdometry, SensorGps
     _HAS_PX4 = True
 except ImportError:
     _HAS_PX4 = False
@@ -76,6 +76,8 @@ CSV_HEADER = [
     # PX4 odometry
     'px4_x', 'px4_y', 'px4_z',
     'px4_qw', 'px4_qx', 'px4_qy', 'px4_qz',
+    # GPS
+    'gps_lat', 'gps_lon', 'gps_alt_msl', 'gps_alt_ellipsoid',
     # Image reference
     'image_filename',
 ]
@@ -128,6 +130,10 @@ class SweepRecorder:
         if odom_topic not in self._ALWAYS_BAG_TOPICS:
             self._ALWAYS_BAG_TOPICS.append(odom_topic)
 
+        gps_topic = config.get('topics', {}).get('px4_gps', '/fmu/out/vehicle_gps_position')
+        if gps_topic not in self._ALWAYS_BAG_TOPICS:
+            self._ALWAYS_BAG_TOPICS.append(gps_topic)
+
         # State
         self._recording = False
         self._abort = False
@@ -149,6 +155,7 @@ class SweepRecorder:
         self._image_dir = None
 
         self._latest_px4_odom = None
+        self._latest_px4_gps = None
         self._latest_det = None
         
         record_rate = self._rec_cfg.get('record_rate_hz', 10.0)
@@ -215,6 +222,11 @@ class SweepRecorder:
             self.node.create_subscription(
                 VehicleOdometry, px4_topic,
                 self._px4_odom_cb, qos_be)
+            gps_topic = config['topics'].get('px4_gps',
+                                              '/fmu/out/vehicle_gps_position')
+            self.node.create_subscription(
+                SensorGps, gps_topic,
+                self._px4_gps_cb, qos_be)
 
     # ── Subscriber callbacks ─────────────────────────────────────────────────
 
@@ -229,6 +241,9 @@ class SweepRecorder:
 
     def _px4_odom_cb(self, msg):
         self._latest_px4_odom = msg
+
+    def _px4_gps_cb(self, msg):
+        self._latest_px4_gps = msg
 
     def _lidar_conf_cb(self, msg: Float32):
         self._lidar_confidence = float(msg.data)
@@ -302,6 +317,13 @@ class SweepRecorder:
         else:
             px4 = [nan] * 7
 
+        # GPS
+        if self._latest_px4_gps is not None:
+            pg = self._latest_px4_gps
+            gps_data = [pg.latitude_deg, pg.longitude_deg, pg.altitude_msl_m, pg.altitude_ellipsoid_m]
+        else:
+            gps_data = [nan] * 4
+
         # LiDAR
         if self._lidar_detected:
             lidar_dist = float(np.hypot(self._lidar_center_x, self._lidar_center_y))
@@ -339,6 +361,9 @@ class SweepRecorder:
             # PX4
             'px4_x': px4[0], 'px4_y': px4[1], 'px4_z': px4[2],
             'px4_qw': px4[3], 'px4_qx': px4[4], 'px4_qy': px4[5], 'px4_qz': px4[6],
+            # GPS
+            'gps_lat': gps_data[0], 'gps_lon': gps_data[1],
+            'gps_alt_msl': gps_data[2], 'gps_alt_ellipsoid': gps_data[3],
             # image placeholder
             'image_filename': '',
         }
