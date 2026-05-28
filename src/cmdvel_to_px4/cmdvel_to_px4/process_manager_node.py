@@ -85,7 +85,7 @@ class ProcessManagerNode(Node):
                 "'video/x-raw(memory:NVMM), width=960, height=480, framerate=24/1' ! "
                 "queue ! nvvidconv ! "
                 "'video/x-raw(memory:NVMM), format=NV12' ! "
-                "queue ! nvv4l2h264enc bitrate=1000000 profile=2 preset-level=1 "
+                "queue ! nvv4l2h264enc bitrate=4000000 profile=2 preset-level=1 "
                 "iframeinterval=30 idrinterval=30 insert-sps-pps=1 ! "
                 "queue ! rtph264pay config-interval=1 pt=96 ! "
                 "queue ! udpsink host=Rosamo port=5000"
@@ -100,7 +100,7 @@ class ProcessManagerNode(Node):
                 "queue ! nvv4l2h264enc bitrate=400000 profile=2 preset-level=1 "
                 "iframeinterval=30 idrinterval=30 insert-sps-pps=1 ! "
                 "queue ! rtph264pay config-interval=1 pt=96 ! "
-                "queue ! udpsink host=Rosamo port=5000"
+                "queue ! udpsink host=Rosamo port=5002"
             ],
             
             'secondary_camera_stream': [
@@ -114,6 +114,19 @@ class ProcessManagerNode(Node):
                 "queue ! rtph264pay config-interval=1 pt=96 ! "
                 "queue ! udpsink host=Rosamo port=5001"
             ],
+
+            'lq_secondary_camera_stream': [
+                'bash', '-c',
+                "gst-launch-1.0 nvarguscamerasrc sensor-id=1 ! "
+                "'video/x-raw(memory:NVMM), width=960, height=480, framerate=24/1' ! "
+                "queue ! nvvidconv ! "
+                "'video/x-raw(memory:NVMM), format=NV12' ! "
+                "queue ! nvv4l2h264enc bitrate=400000 profile=2 preset-level=1 "
+                "iframeinterval=30 idrinterval=15 insert-sps-pps=1 ! "
+                "queue ! rtph264pay config-interval=1 pt=96 ! "
+                "queue ! udpsink host=Rosamo port=5001"
+            ],
+
 
             'pointcloud_to_laserscan': [
                 'bash', '-lc',

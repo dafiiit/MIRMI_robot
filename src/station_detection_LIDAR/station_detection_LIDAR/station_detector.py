@@ -107,18 +107,31 @@ class StationDetector(Node):
         exp_r = float(self.get_parameter("expected_range").value)
         r_tol = float(self.get_parameter("range_tolerance").value)
 
-        # 1. Downsampling & Filtering
-        pts_xy: List[Tuple[float, float]] = []
-        for p in point_cloud2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True):
-            x, y, z = float(p[0]), float(p[1]), float(p[2])
-            if z < z_min or z > z_max:
-                continue
-            pts_xy.append((x, y))
-
-        if len(pts_xy) < min_pts_cluster:
+        # 1. Downsampling & Filtering using NumPy
+        struct_pts = point_cloud2.read_points(msg, field_names=["x", "y", "z"], skip_nans=True)
+        if len(struct_pts) == 0:
             return
 
-        xy = np.asarray(pts_xy, dtype=np.float32)
+        # Stack into unstructured 2D float32 array of shape (N, 3)
+        points = np.stack([struct_pts['x'], struct_pts['y'], struct_pts['z']], axis=-1)
+
+        # Fast NumPy vector filtering for height limits
+        z_mask = (points[:, 2] >= z_min) & (points[:, 2] <= z_max)
+        filtered_points = points[z_mask]
+
+        if len(filtered_points) < min_pts_cluster:
+            return
+
+        # Extract X and Y coordinates
+        xy = filtered_points[:, :2].astype(np.float32)
+
+        # Safe decimation/downsampling if the point cloud is excessively dense
+        # Capping the points processed by the cell-assignment Python loop at 2000 points
+        max_loop_points = 2000
+        if len(xy) > max_loop_points:
+            decimation = len(xy) // max_loop_points
+            xy = xy[::decimation]
+
         inv = 1.0 / max(grid_res, 1e-6)
         ix = np.floor(xy[:, 0] * inv).astype(np.int32)
         iy = np.floor(xy[:, 1] * inv).astype(np.int32)

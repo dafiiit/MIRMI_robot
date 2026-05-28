@@ -129,6 +129,9 @@ system:
 sweep_test:
   capture_duration: 10.0          # seconds per step
   output_dir: "~/sweep_test_data"  # local directory for CSV + bags
+  auto_start_sensors: true
+  sensor_startup_grace_s: 5.0
+  bag_compression: true
 
   distance_sweep:
     start_m: 10.0   # farthest distance (m)

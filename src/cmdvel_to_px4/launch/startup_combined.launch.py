@@ -17,13 +17,23 @@ def generate_launch_description():
         ])
     )
 
-    # 2. Launch Foxglove Bridge
-    foxglove_bridge_launch = IncludeLaunchDescription(
-        AnyLaunchDescriptionSource([
-            PathJoinSubstitution([pkg_foxglove_bridge, 'launch', 'foxglove_bridge_launch.xml'])
-        ]),
-        # Hier übergeben wir die IPv6-Adresse (::) an das Launch-File
-        launch_arguments=[('address', '\'::\'')]
+    # 2. Launch Foxglove Bridge Node directly to support native list parameters
+    # Mit topic_whitelist werden die fehlerhaften px4_msgs (/fmu/...) herausgefiltert,
+    # um Speicherzugriffsfehler (Segfaults / Exit Code -11) im Bridge-Node zu verhindern.
+    foxglove_bridge_node = Node(
+        package='foxglove_bridge',
+        executable='foxglove_bridge',
+        name='foxglove_bridge',
+        parameters=[{
+            'address': '::',
+            'topic_whitelist': [
+                '/clock', '/tf', '/tf_static', '/scan', '/map.*', '/odom_px4',
+                '/odometry/.*', '/cmd_vel', '/vicon/.*', '/robot_description',
+                '/joint_states', '/litime_bms/.*', '/apriltag/.*', '/camera/.*',
+                '/rosout', '/parameter_events', '/test_ping', '/start_.*',
+                '/stop_.*', '/sweep_test/.*', '/fmu/.*'
+            ]
+        }]
     )
 
     # 3. Run Vicon Odometry Publisher
@@ -79,7 +89,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         px4_bridge_launch,
-        foxglove_bridge_launch,
+        foxglove_bridge_node,
         vicon_odometry_node,
         px4_arm_service_node,
         process_manager_node,

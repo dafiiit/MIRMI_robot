@@ -40,13 +40,7 @@ ros2 topic echo /sweep_test/target_placement
 ```
 
 ### 3.4 Capturing Data
-Once the target is placed at the specified location, trigger the 10-second capture window:
-```bash
-ros2 topic pub --once /sweep_test/cmd/capture std_msgs/Empty '{}'
-```
-
-Wait 10 seconds. The node will automatically save a CSV and a rosbag locally, and advance to the next step.
-Repeat the placement and capture process until all steps are complete.
+The sweep node is auto-started and the capture automatically triggered when sending the configure command. The specified wait grace period allows the sensors to spin up before the 10-second capture window begins. Wait 10 seconds. The node will automatically save a CSV and a rosbag locally, and complete the recording.
 
 ### 3.5 Uploading Data
 To upload the collected data for the current sweep to Google Drive (if configured), trigger the upload command:

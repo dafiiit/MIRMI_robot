@@ -421,8 +421,14 @@ class SweepRecorder:
         """Spawn ros2 bag record as a subprocess."""
         topics = self._bag_topics_for_sensors()
         cmd = ['ros2', 'bag', 'record', '--output', bag_dir] + topics
+        
+        # Add compression if configured
+        sweep_cfg = self.cfg.get('sweep_test', {})
+        if sweep_cfg.get('bag_compression', False):
+            cmd.extend(['--compression-mode', 'message', '--compression-format', 'zstd'])
+
         self.node.get_logger().info(
-            f'[SweepRecorder] Starting bag: {bag_dir}\n  topics: {topics}')
+            f'[SweepRecorder] Starting bag: {bag_dir}\n  compression={sweep_cfg.get("bag_compression", False)}\n  topics: {topics}')
         try:
             self._bag_proc = subprocess.Popen(
                 cmd,
