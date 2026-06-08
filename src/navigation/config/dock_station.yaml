@@ -1,0 +1,24 @@
+# Docking station pose
+# Source: session 1 (20260521_140405) — 23 measurements at 0°/30°/45° × 7 distances
+# GPS quality (within-file std dev): 0.002–0.005 m — sub-centimetre GPS stability
+# Position RMS (internal consistency of session): 0.70 m
+# Note: session 2 (90°/135°/180°) excluded — 2.02 m GPS drift vs session 1
+
+dock_station:
+  # Absolute GPS position of the docking station (WGS84)
+  lat: 48.25224255
+  lon: 11.60473796
+  alt: 491.30          # metres MSL
+
+  # Direction the station's "front" (0° axis) faces.
+  # Angles are measured CCW from this axis (standard math / ROS convention).
+  # A robot at angle 0°, distance D is D metres along this direction.
+  # heading_compass_deg : degrees CW from North  (compass / NED)
+  # heading_enu_deg     : degrees CCW from East  (ROS / ENU)
+  heading_compass_deg: 88.80   # ≈ due East
+  heading_enu_deg:      1.20
+
+  # Metadata
+  n_measurements: 23
+  rms_residual_m: 0.696
+  sessions_used: "20260521_140405 (angles 0/30/45 deg, distances 0-10 m)"

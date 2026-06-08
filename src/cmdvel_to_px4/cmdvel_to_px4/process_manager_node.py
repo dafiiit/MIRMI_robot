@@ -79,52 +79,77 @@ class ProcessManagerNode(Node):
                 'ros2', 'service', 'call', '/px4/arm',
                 'std_srvs/srv/SetBool', '{data: true}'
             ],
+
             'camera_stream': [
                 'bash', '-c',
-                "gst-launch-1.0 nvarguscamerasrc sensor-id=0 ! "
-                "'video/x-raw(memory:NVMM), width=960, height=480, framerate=24/1' ! "
-                "queue ! nvvidconv ! "
+                "gst-launch-1.0 -e nvarguscamerasrc sensor-id=0 ! "
+                "'video/x-raw(memory:NVMM), width=720, height=360, framerate=18/1' ! "
+                "queue max-size-buffers=1 leaky=downstream ! "
+                "nvvidconv ! "
                 "'video/x-raw(memory:NVMM), format=NV12' ! "
-                "queue ! nvv4l2h264enc bitrate=4000000 profile=2 preset-level=1 "
-                "iframeinterval=30 idrinterval=30 insert-sps-pps=1 ! "
-                "queue ! rtph264pay config-interval=1 pt=96 ! "
-                "queue ! udpsink host=Rosamo port=5000"
+                "queue max-size-buffers=1 leaky=downstream ! "
+                "nvv4l2h264enc bitrate=720000 control-rate=1 maxperf-enable=1 "
+                "profile=2 preset-level=1 iframeinterval=9 idrinterval=9 insert-sps-pps=1 ! "
+                "'video/x-h264,stream-format=byte-stream,alignment=au' ! "
+                "h264parse config-interval=-1 ! "
+                "queue max-size-buffers=1 leaky=downstream ! "
+                "rtph264pay config-interval=-1 pt=96 mtu=1200 ! "
+                "queue max-size-buffers=1 leaky=downstream ! "
+                "udpsink host=Rosamo port=5000 sync=false async=false"
             ],
 
             'lq_camera_stream': [
                 'bash', '-c',
-                "gst-launch-1.0 nvarguscamerasrc sensor-id=0 ! "
-                "'video/x-raw(memory:NVMM), width=720, height=360, framerate=15/1' ! "
-                "queue ! nvvidconv ! "
+                "gst-launch-1.0 -e nvarguscamerasrc sensor-id=0 ! "
+                "'video/x-raw(memory:NVMM), width=600, height=300, framerate=18/1' ! "
+                "queue max-size-buffers=1 leaky=downstream ! "
+                "nvvidconv ! "
                 "'video/x-raw(memory:NVMM), format=NV12' ! "
-                "queue ! nvv4l2h264enc bitrate=400000 profile=2 preset-level=1 "
-                "iframeinterval=30 idrinterval=30 insert-sps-pps=1 ! "
-                "queue ! rtph264pay config-interval=1 pt=96 ! "
-                "queue ! udpsink host=Rosamo port=5002"
+                "queue max-size-buffers=1 leaky=downstream ! "
+                "nvv4l2h264enc bitrate=360000 control-rate=1 maxperf-enable=1 "
+                "profile=2 preset-level=1 iframeinterval=9 idrinterval=9 insert-sps-pps=1 ! "
+                "'video/x-h264,stream-format=byte-stream,alignment=au' ! "
+                "h264parse config-interval=-1 ! "
+                "queue max-size-buffers=1 leaky=downstream ! "
+                "rtph264pay config-interval=-1 pt=96 mtu=1200 ! "
+                "queue max-size-buffers=1 leaky=downstream ! "
+                "udpsink host=Rosamo port=5002 sync=false async=false"
             ],
-            
+
             'secondary_camera_stream': [
                 'bash', '-c',
-                "gst-launch-1.0 nvarguscamerasrc sensor-id=1 ! "
-                "'video/x-raw(memory:NVMM), width=960, height=480, framerate=24/1' ! "
-                "queue ! nvvidconv ! "
+                "gst-launch-1.0 -e nvarguscamerasrc sensor-id=1 ! "
+                "'video/x-raw(memory:NVMM), width=480, height=240, framerate=18/1' ! "
+                "queue max-size-buffers=1 leaky=downstream ! "
+                "nvvidconv ! "
                 "'video/x-raw(memory:NVMM), format=NV12' ! "
-                "queue ! nvv4l2h264enc bitrate=1000000 profile=2 preset-level=1 "
-                "iframeinterval=30 idrinterval=30 insert-sps-pps=1 ! "
-                "queue ! rtph264pay config-interval=1 pt=96 ! "
-                "queue ! udpsink host=Rosamo port=5001"
+                "queue max-size-buffers=1 leaky=downstream ! "
+                "nvv4l2h264enc bitrate=360000 control-rate=1 maxperf-enable=1 "
+                "profile=2 preset-level=1 iframeinterval=9 idrinterval=9 insert-sps-pps=1 ! "
+                "'video/x-h264,stream-format=byte-stream,alignment=au' ! "
+                "h264parse config-interval=-1 ! "
+                "queue max-size-buffers=1 leaky=downstream ! "
+                "rtph264pay config-interval=-1 pt=96 mtu=1200 ! "
+                "queue max-size-buffers=1 leaky=downstream ! "
+                "udpsink host=Rosamo port=5001 sync=false async=false"
             ],
 
             'lq_secondary_camera_stream': [
                 'bash', '-c',
-                "gst-launch-1.0 nvarguscamerasrc sensor-id=1 ! "
-                "'video/x-raw(memory:NVMM), width=960, height=480, framerate=24/1' ! "
-                "queue ! nvvidconv ! "
+                "gst-launch-1.0 -e nvarguscamerasrc sensor-id=1 ! "
+                "'video/x-raw(memory:NVMM), width=480, height=240, framerate=18/1' ! "
+                "queue max-size-buffers=1 leaky=downstream ! "
+                "nvvidconv ! "
                 "'video/x-raw(memory:NVMM), format=NV12' ! "
-                "queue ! nvv4l2h264enc bitrate=400000 profile=2 preset-level=1 "
-                "iframeinterval=30 idrinterval=15 insert-sps-pps=1 ! "
-                "queue ! rtph264pay config-interval=1 pt=96 ! "
-                "queue ! udpsink host=Rosamo port=5001"
+                "queue max-size-buffers=1 leaky=downstream ! "
+                "nvv4l2h264enc bitrate=180000 control-rate=1 maxperf-enable=1 "
+                "profile=2 preset-level=1 iframeinterval=9 idrinterval=9 insert-sps-pps=1 ! "
+                "'video/x-h264,stream-format=byte-stream,alignment=au' ! "
+                "h264parse config-interval=-1 ! "
+                "queue max-size-buffers=1 leaky=downstream ! "
+                "rtph264pay config-interval=-1 pt=96 mtu=1200 ! "
+                "queue max-size-buffers=1 leaky=downstream ! "
+                "udpsink host=Rosamo port=5003 sync=false async=false"
             ],
 
 

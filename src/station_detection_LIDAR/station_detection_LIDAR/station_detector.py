@@ -47,7 +47,7 @@ class StationDetector(Node):
         super().__init__("station_detector")
 
         # Configurable Parameters
-        self.declare_parameter("cloud_topic", "/livox/lidar")
+        self.declare_parameter("cloud_topic", "/livox/lidar")  # direct topic — no remap needed
         self.declare_parameter("z_min", 0.10)
         self.declare_parameter("z_max", 2.20)
         

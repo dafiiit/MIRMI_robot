@@ -1,0 +1,55 @@
+rtabmap:
+  ros__parameters:
+    # ── Frames ─────────────────────────────────────────────────────────────
+    frame_id: base_link_ekf          # robot base frame (from EKF)
+    odom_frame_id: odom_filtered     # odometry frame (from robot_localization)
+    map_frame_id: map
+
+    # ── Subscriptions ──────────────────────────────────────────────────────
+    subscribe_depth: false
+    subscribe_rgb: false
+    subscribe_scan: true             # 2D LaserScan from pointcloud_to_laserscan
+    subscribe_stereo: false
+    subscribe_scan_cloud: false
+
+    # ── Sync ───────────────────────────────────────────────────────────────
+    approx_sync: true
+    queue_size: 10
+
+    # ── Publishing ─────────────────────────────────────────────────────────
+    publish_tf: true                 # publishes map → odom_filtered TF
+    gen_scan: false
+
+    # ── Database ───────────────────────────────────────────────────────────
+    # Set a path to persist the map across restarts, e.g.:
+    # database_path: /home/holybro/maps/rtabmap.db
+    database_path: ""                # empty = in-memory only
+
+    # ── Grid / Occupancy Map ───────────────────────────────────────────────
+    Grid/Sensor: "0"                 # 0 = laser scan (not depth camera)
+    Grid/CellSize: "0.05"           # 5 cm resolution
+    Grid/RangeMax: "20.0"           # ignore returns beyond 20 m
+    Grid/FootprintRadius: "0.35"    # robot half-width for clearing
+    Grid/3D: "false"
+
+    # ── Memory ─────────────────────────────────────────────────────────────
+    Mem/IncrementalMemory: "true"   # SLAM mode (set false for localization-only)
+    Mem/InitWMWithAllNodes: "false"
+
+    # ── Scan-to-scan registration (ICP) ────────────────────────────────────
+    Reg/Strategy: "1"               # 1 = ICP
+    Icp/MaxCorrespondenceDistance: "0.15"
+    Icp/PointToPlane: "false"       # 2D scan has no normals
+    Icp/Iterations: "30"
+    Icp/RangeMax: "20.0"
+
+    # ── Loop closure & graph updates ───────────────────────────────────────
+    RGBD/LinearUpdate: "0.05"       # update every 5 cm of movement
+    RGBD/AngularUpdate: "0.05"      # or every ~3 degrees of rotation
+    RGBD/OptimizeFromGraphEnd: "false"
+    RGBD/ProximityBySpace: "true"
+    RGBD/ProximityMaxGraphDepth: "0"
+    RGBD/ProximityPathMaxNeighbors: "1"
+
+    # ── Optimizer ──────────────────────────────────────────────────────────
+    Optimizer/GravitySigma: "0"     # 0 = disable gravity constraint (no IMU)
