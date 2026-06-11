@@ -24,7 +24,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 
 from geometry_msgs.msg import PoseStamped
-from sensor_msgs.msg import CameraInfo, CompressedImage
+from sensor_msgs.msg import CameraInfo, CompressedImage, PointCloud2
 from std_msgs.msg import Float32
 from visualization_msgs.msg import Marker
 
@@ -154,6 +154,10 @@ class SweepRecorder:
         self._image_min_interval = 1.0 / max(0.1, self._rec_cfg.get('image_save_rate', 2.0))
         self._image_dir = None
 
+        # Capture counters (reset each step in start())
+        self._image_count = 0       # JPEG frames saved to disk this step
+        self._pointcloud_count = 0  # PointCloud2 messages seen on the raw lidar topic
+
         self._latest_px4_odom = None
         self._latest_px4_gps = None
         self._latest_det = None
@@ -215,6 +219,13 @@ class SweepRecorder:
             Marker, '/station_marker',
             self._lidar_marker_cb, qos_be)
 
+        # Raw LiDAR point cloud — counted (not stored) so status can report how
+        # many clouds the bag captured. Same topic recorded by ros2 bag.
+        lidar_raw_topic = self._sc.get('lidar_raw_topic', '/livox/lidar')
+        self.node.create_subscription(
+            PointCloud2, lidar_raw_topic,
+            self._lidar_cloud_cb, qos_be)
+
         # PX4 odometry
         if _HAS_PX4:
             px4_topic = config['topics'].get('px4_odometry',
@@ -253,6 +264,11 @@ class SweepRecorder:
         self._lidar_center_x = float(msg.pose.position.x)
         self._lidar_center_y = float(msg.pose.position.y)
         self._lidar_detected = True
+
+    def _lidar_cloud_cb(self, msg: PointCloud2):
+        """Count raw point clouds while recording (these go into the bag)."""
+        if self._recording and not self._abort and self.sensors in ('lidar', 'both'):
+            self._pointcloud_count += 1
 
     def _apriltag_cb(self, det_msg):
         """Called on every AprilTag detection array."""
@@ -390,6 +406,7 @@ class SweepRecorder:
             self.node.get_logger().warn(f'[SweepRecorder] Image save failed: {e}')
             return
 
+        self._image_count += 1
         with self._lock:
             if self._buffer:
                 self._buffer[-1]['image_filename'] = fname
@@ -409,7 +426,7 @@ class SweepRecorder:
             ]
         if self.sensors in ('lidar', 'both'):
             topics += [
-                sc.get('lidar_raw_topic',       '/_livox/lidar'),
+                sc.get('lidar_raw_topic',       '/livox/lidar'),
                 sc.get('lidar_detection_topic', '/station_confidence'),
                 '/station_marker',
             ]
@@ -482,6 +499,10 @@ class SweepRecorder:
         self._start_ns = self.node.get_clock().now().nanoseconds
         self._abort = False
 
+        # Reset capture counters for this step
+        self._image_count = 0
+        self._pointcloud_count = 0
+
         # Reset LiDAR snapshot
         self._lidar_confidence = _nan()
         self._lidar_center_x = _nan()
@@ -551,6 +572,16 @@ class SweepRecorder:
     def sample_count(self) -> int:
         with self._lock:
             return len(self._buffer)
+
+    @property
+    def image_count(self) -> int:
+        """JPEG frames saved this step."""
+        return self._image_count
+
+    @property
+    def pointcloud_count(self) -> int:
+        """Raw point clouds captured (into the bag) this step."""
+        return self._pointcloud_count
 
     @property
     def is_recording(self) -> bool:

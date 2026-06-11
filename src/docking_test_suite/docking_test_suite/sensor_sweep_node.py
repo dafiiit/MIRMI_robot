@@ -470,11 +470,13 @@ class SensorSweepNode(Node):
         )
 
         step_done_msg = json.dumps({
-            'step_label': step['label'],
-            'samples':    n,
-            'csv_file':   csv_path,
-            'bag_dir':    bag_dir,
-            'duration_s': self._capture_duration,
+            'step_label':  step['label'],
+            'samples':     n,
+            'images':      self._recorder.image_count,
+            'pointclouds': self._recorder.pointcloud_count,
+            'csv_file':    csv_path,
+            'bag_dir':     bag_dir,
+            'duration_s':  self._capture_duration,
         })
         self._pub_step_done.publish(String(data=step_done_msg))
 
@@ -626,6 +628,8 @@ class SensorSweepNode(Node):
             'instruction':        instruction,
             'captures_in_folder': self._count_captures_in_folder(),
             'samples_this_step':  self._recorder.sample_count,
+            'images_this_step':       self._recorder.image_count,
+            'pointclouds_this_step':  self._recorder.pointcloud_count,
             'capturing':          capturing,
             'capture_elapsed_s':  round(elapsed_s, 2),
             'distance':           distance,

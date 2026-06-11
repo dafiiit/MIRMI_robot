@@ -150,7 +150,7 @@ sweep_test:
     camera_info_topic:      "/camera/camera/color/camera_info"
     camera_overlay_topic:   "/apriltag/overlay/compressed"
     apriltag_topic:         "/tag_detections"
-    lidar_raw_topic:        "/_livox/lidar"           # raw PointCloud2
+    lidar_raw_topic:        "/livox/lidar"            # raw PointCloud2 (livox driver publishes here, no underscore)
     lidar_detection_topic:  "/station_confidence"    # Float32 from StationDetector
 
 # -----------------------------------------------------------------------------
