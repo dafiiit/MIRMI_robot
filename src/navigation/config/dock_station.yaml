@@ -1,24 +1,20 @@
-# Docking station pose
-# Source: session 1 (20260521_140405) — 23 measurements at 0°/30°/45° × 7 distances
-# GPS quality (within-file std dev): 0.002–0.005 m — sub-centimetre GPS stability
-# Position RMS (internal consistency of session): 0.70 m
-# Note: session 2 (90°/135°/180°) excluded — 2.02 m GPS drift vs session 1
+# Docking station pose  (auto-derived, accuracy-weighted)
+# Orientation: session-1 sweep (2026-05-21 14:04, 0/30/45 deg), GPS scatter 0.2-0.5 cm,
+#              accuracy-weighted least-squares fit, wRMS 0.51 m.
+# Position:    ANCHORED to today's RTK frame so the 0deg/10m target coincides with
+#              the 2026-06-11 10:35 measurement (dist_10p0m_ang_p000deg, scatter 0.74 cm).
+# Session-2 (90/135/180 deg) EXCLUDED: GPS scatter 1.5-8.7 cm and 2.9 m frame offset.
+# Angle convention: 0deg = along the front axis; CCW positive; robot faces the station.
 
 dock_station:
-  # Absolute GPS position of the docking station (WGS84)
-  lat: 48.25224255
-  lon: 11.60473796
-  alt: 491.30          # metres MSL
+  lat: 48.25224185
+  lon: 11.60474217
+  alt: 491.36            # metres MSL
 
-  # Direction the station's "front" (0° axis) faces.
-  # Angles are measured CCW from this axis (standard math / ROS convention).
-  # A robot at angle 0°, distance D is D metres along this direction.
-  # heading_compass_deg : degrees CW from North  (compass / NED)
-  # heading_enu_deg     : degrees CCW from East  (ROS / ENU)
-  heading_compass_deg: 88.80   # ≈ due East
-  heading_enu_deg:      1.20
+  heading_compass_deg: 88.76    # deg CW from North (~due East)
+  heading_enu_deg:     1.24     # deg CCW from East (ROS/ENU)
 
-  # Metadata
-  n_measurements: 23
-  rms_residual_m: 0.696
-  sessions_used: "20260521_140405 (angles 0/30/45 deg, distances 0-10 m)"
+  # Provenance
+  position_anchor: "20260611_103540 dist_10p0m_ang_p000deg (today's RTK frame)"
+  orientation_source: "20260521_140405 sessions, accuracy-weighted LSQ (0/30/45 deg)"
+  orientation_rms_m: 0.51

@@ -21,8 +21,8 @@ def generate_launch_description():
 
     cmdvel = Node(
         package='cmdvel_to_px4',
-        executable='cmdvel_to_px4_3',
-        name='cmdvel_to_px4_3',
+        executable='cmdvel_to_px4_4',
+        name='cmdvel_to_px4_4',
         output='screen',
     )
 

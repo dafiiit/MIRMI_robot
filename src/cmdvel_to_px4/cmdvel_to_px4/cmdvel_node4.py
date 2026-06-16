@@ -2,9 +2,14 @@
 # -*- coding: utf-8 -*-
 """
 /cmd_vel → PX4 Direct Actuator Control
+
 Default setup for rover:
   - MAIN1 → Throttle (Motor)
   - AUX1  → Steering (Servo)
+
+Stop behavior:
+  - /stop        → full stop: throttle, steering, and auxiliary/tool stop
+  - /safety/stop → auxiliary/tool stop only; main motor and steering keep working
 """
 
 import rclpy
@@ -26,24 +31,24 @@ class CmdVelToPx4Rover(Node):
         # ---- Fixed default parameters for your setup ----
         self.rate_hz = 20.0
         self.dt = 1.0 / self.rate_hz
-        self.deadman = 0.2      # seconds without cmd_vel → stop
+        self.deadman = 0.2       # seconds without cmd_vel → stop
         self.warmup = 0.50       # seconds until offboard becomes active
-        self.throttle_max = 0.9  # max motor commands (±) 0.6
+        self.throttle_max = 0.9  # max motor commands
         self.throttle_bias = 0.0 # ESC neutral position
         self.tool_bias = 0.0
-        self.steer_max = 0.9     # max steering commands (±) 0.6
+        self.steer_max = 0.9     # max steering commands
         self.invert_speed = False
         self.invert_steer = True
 
-        # Hardware mapping (as in your setup)
+        # Hardware mapping
         self.steering_on_main = False  # False = AUX bank
         self.motor_index = 0           # MAIN1 = motor
         self.steer_index_aux = 0       # AUX1  = steering servo
-        self.steer_index_main = 1      # (only if steering_on_main=True)
+        self.steer_index_main = 1      # only if steering_on_main=True
 
         # Determine array lengths automatically
-        self.n_main = len(ActuatorMotors().control)   # typically 12
-        self.n_aux = len(ActuatorServos().control)    # typically 8
+        self.n_main = len(ActuatorMotors().control)
+        self.n_aux = len(ActuatorServos().control)
 
         # ROS2 setup
         qos = QoSProfile(
@@ -52,19 +57,63 @@ class CmdVelToPx4Rover(Node):
             history=HistoryPolicy.KEEP_LAST,
             depth=10
         )
-        self.sub_cmd = self.create_subscription(Twist, '/cmd_vel', self.on_cmd, qos)
-        self.sub_stop = self.create_subscription(Empty, '/stop', self.on_stop, qos)
-        self.pub_mode = self.create_publisher(OffboardControlMode, '/fmu/in/offboard_control_mode', qos)
-        self.pub_cmd = self.create_publisher(VehicleCommand, '/fmu/in/vehicle_command', qos)
-        self.pub_main = self.create_publisher(ActuatorMotors, '/fmu/in/actuator_motors', qos)
-        self.pub_aux = self.create_publisher(ActuatorServos, '/fmu/in/actuator_servos', qos)
+
+        self.sub_cmd = self.create_subscription(
+            Twist,
+            '/cmd_vel',
+            self.on_cmd,
+            qos
+        )
+
+        # Full stop: stops main motor, steering, and auxiliary/tool
+        self.sub_stop = self.create_subscription(
+            Empty,
+            '/stop',
+            self.on_stop,
+            qos
+        )
+
+        # Auxiliary-only safety stop
+        self.sub_aux_stop = self.create_subscription(
+            Empty,
+            '/safety/stop',
+            self.on_aux_stop,
+            qos
+        )
+
+        self.pub_mode = self.create_publisher(
+            OffboardControlMode,
+            '/fmu/in/offboard_control_mode',
+            qos
+        )
+        self.pub_cmd = self.create_publisher(
+            VehicleCommand,
+            '/fmu/in/vehicle_command',
+            qos
+        )
+        self.pub_main = self.create_publisher(
+            ActuatorMotors,
+            '/fmu/in/actuator_motors',
+            qos
+        )
+        self.pub_aux = self.create_publisher(
+            ActuatorServos,
+            '/fmu/in/actuator_servos',
+            qos
+        )
 
         # State
         self.last_cmd_ts = self.get_clock().now()
         self.vx = 0.0
         self.wz = 0.0
         self.vz = 0.0
+
+        # force_stop controls full vehicle stop
         self.force_stop = False
+
+        # aux_stop controls only the auxiliary/tool actuator
+        self.aux_stop = False
+
         self.warmup_ticks = int(self.warmup / self.dt)
         self.warm_cnt = 0
         self.offboard = False
@@ -74,6 +123,7 @@ class CmdVelToPx4Rover(Node):
         self._dbg = 0
         self._last_timeout_state = False
         self._last_force_stop_state = False
+        self._last_aux_stop_state = False
         self._last_cmd_print_ns = 0
 
         self.timer = self.create_timer(self.dt, self.tick)
@@ -81,19 +131,23 @@ class CmdVelToPx4Rover(Node):
         self.get_logger().info(
             f"PX4 rover node started (MAIN1→Throttle, AUX1→Steering) "
             f"| MAIN={self.n_main} AUX={self.n_aux} "
-            f"| deadman={self.deadman:.3f}s rate={self.rate_hz:.1f}Hz dt={self.dt:.3f}s"
+            f"| deadman={self.deadman:.3f}s rate={self.rate_hz:.1f}Hz dt={self.dt:.3f}s "
+            f"| /stop=full stop | /safety/stop=auxiliary stop only"
         )
 
     # --- Callbacks ---
     def on_cmd(self, msg: Twist):
         now = self.get_clock().now()
+
         self.vx = msg.linear.x
         self.wz = msg.angular.z
         self.vz = msg.linear.z
         self.last_cmd_ts = now
+
+        # A new /cmd_vel clears only the full stop.
+        # It does NOT clear aux_stop, so /safety/stop stays latched.
         self.force_stop = False
 
-        # Print every received cmd_vel
         self.get_logger().info(
             f"RX /cmd_vel | vx={self.vx:.3f}, wz={self.wz:.3f}, vz={self.vz:.3f}, "
             f"t={now.nanoseconds}"
@@ -101,7 +155,22 @@ class CmdVelToPx4Rover(Node):
 
     def on_stop(self, _):
         self.force_stop = True
-        self.get_logger().warn("RX /stop | EMERGENCY STOP: immediate 0")
+        self.get_logger().warn("RX /stop | FULL STOP: throttle, steering, and auxiliary/tool stop")
+
+    def on_aux_stop(self, _):
+        self.aux_stop = True
+        self.vz = 0.0
+
+        now = self.get_clock().now()
+        t_us = now.nanoseconds // 1000
+
+        # Stop only the auxiliary/tool actuator.
+        # This does NOT stop MAIN throttle or AUX1 steering servo.
+        self.set_actuator_set1(t_us, -self.tool_bias)
+
+        self.get_logger().warn(
+            "RX /safety/stop | AUXILIARY STOP ONLY: main motor and steering remain controlled by /cmd_vel"
+        )
 
     # --- PX4 commands ---
     def hb_offboard_mode(self, t_us: int):
@@ -173,8 +242,10 @@ class CmdVelToPx4Rover(Node):
             srv = ActuatorServos()
             srv.timestamp = t_us
             srv.control = [float('nan')] * self.n_aux
+
             if 0 <= self.steer_index_aux < self.n_aux:
                 srv.control[self.steer_index_aux] = steer
+
             self.pub_aux.publish(srv)
 
     # --- Main loop ---
@@ -219,11 +290,17 @@ class CmdVelToPx4Rover(Node):
         if not (self.force_stop or timed_out):
             raw_thr = clamp(self.vx, -1.0, 1.0) * self.throttle_max
             steer = clamp(self.wz, -1.0, 1.0) * self.steer_max
-            raw_tool = clamp(self.vz, -1.0, 1.0)
-            state_reason = "LIVE_CMD"
+
+            if self.aux_stop:
+                raw_tool = 0.0
+                state_reason = "LIVE_CMD_AUX_STOP"
+            else:
+                raw_tool = clamp(self.vz, -1.0, 1.0)
+                state_reason = "LIVE_CMD"
 
         if self.invert_speed:
             raw_thr = -raw_thr
+
         if self.invert_steer:
             steer = -steer
 
@@ -239,23 +316,37 @@ class CmdVelToPx4Rover(Node):
                 f"cmd_vel TIMEOUT START | age={age:.3f}s > deadman={self.deadman:.3f}s "
                 f"| last vx={self.vx:.3f}, wz={self.wz:.3f}, vz={self.vz:.3f}"
             )
+
         if (not timed_out) and self._last_timeout_state:
             self.get_logger().info(
                 f"cmd_vel TIMEOUT END | age={age:.3f}s | cmd stream resumed"
             )
+
         self._last_timeout_state = timed_out
 
-        # Print when force_stop changes
+        # Print when full force_stop changes
         if self.force_stop and not self._last_force_stop_state:
-            self.get_logger().warn("force_stop ACTIVE")
+            self.get_logger().warn("force_stop ACTIVE from /stop")
+
         if (not self.force_stop) and self._last_force_stop_state:
-            self.get_logger().info("force_stop CLEARED")
+            self.get_logger().info("force_stop CLEARED by new /cmd_vel")
+
         self._last_force_stop_state = self.force_stop
 
-        # Debug output every tick for deep debugging
+        # Print when auxiliary stop changes
+        if self.aux_stop and not self._last_aux_stop_state:
+            self.get_logger().warn("aux_stop ACTIVE from /safety/stop")
+
+        if (not self.aux_stop) and self._last_aux_stop_state:
+            self.get_logger().info("aux_stop CLEARED")
+
+        self._last_aux_stop_state = self.aux_stop
+
+        # Debug output every tick
         self.get_logger().info(
             f"TICK | mode={state_reason} | age={age:.3f}s | "
             f"vx={self.vx:.3f}, wz={self.wz:.3f}, vz={self.vz:.3f} | "
+            f"force_stop={self.force_stop} aux_stop={self.aux_stop} | "
             f"raw_thr={raw_thr:.3f}, steer={steer:.3f}, raw_tool={raw_tool:.3f} | "
             f"thr={thr:.3f}, tool={tool:.3f}"
         )
@@ -264,9 +355,14 @@ class CmdVelToPx4Rover(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = CmdVelToPx4Rover()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':
